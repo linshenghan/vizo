@@ -79,6 +79,7 @@ MCP_SERVICE_METADATA = {
         "kind": "frontend",
     },
 }
+LOCKED_MCP_SERVICE_NAMES = ("serena", "vizo-router")
 MAIN_SESSION_MCP_NAMES = ("serena", "mcp-chrome", "playwright", "vizo-router", "jina")
 
 
@@ -104,6 +105,10 @@ def get_mcp_service_metadata(name: str) -> dict:
     }
 
 
+def is_locked_mcp_service(name: str) -> bool:
+    return name in LOCKED_MCP_SERVICE_NAMES
+
+
 def load_mcp_service_state(config_data: dict | None = None) -> dict:
     data = config_data
     if data is None:
@@ -116,6 +121,8 @@ def load_mcp_service_state(config_data: dict | None = None) -> dict:
 
 
 def is_mcp_service_enabled(name: str, config_data: dict | None = None) -> bool:
+    if is_locked_mcp_service(name):
+        return True
     state = load_mcp_service_state(config_data)
     item = state.get(name)
     if isinstance(item, dict) and "enabled" in item:

@@ -25,8 +25,10 @@ from lib.openai_compat_bridge import (
     validate_openai_compatible_base_url,
 )
 from lib.mcp_runtime import (
+    LOCKED_MCP_SERVICE_NAMES,
     get_mcp_service_metadata,
     is_chrome_bridge_connected,
+    is_locked_mcp_service,
     is_mcp_service_enabled,
     load_mcp_service_state,
     _find_packaged_serena_bin,
@@ -2327,7 +2329,7 @@ class McpServiceManager:
     CHROME_EXTENSION_ZIP = _Path(__file__).resolve().parent.parent / "assets" / "chrome-mcp-extension.zip"
     CHROME_BRIDGE_SCRIPT = _Path(__file__).resolve().parent / "chrome_mcp_stdio.py"
     VIZO_ROUTER_SCRIPT = _Path(__file__).resolve().parent / "vizo_router_mcp_stdio.py"
-    BUILTIN_SERVICES = ("serena", "mcp-chrome", "vizo-router", "playwright")
+    BUILTIN_SERVICES = ("serena", "vizo-router", "mcp-chrome", "playwright")
     CORE_SERVICES = ("serena", "mcp-chrome", "vizo-router")
     BUILTIN_SERVICE_SPECS = {
         "serena": {
@@ -2437,13 +2439,18 @@ class McpServiceManager:
         playwright_runtime_ok = self._playwright_runtime_available()
 
         services = []
-        for name in sorted(
-            all_names,
-            key=lambda item: (0 if get_mcp_service_metadata(item)["is_core"] else 1,
-                              get_mcp_service_metadata(item)["display_name"].lower(), item),
-        ):
+        locked_order = {name: index for index, name in enumerate(LOCKED_MCP_SERVICE_NAMES)}
+
+        def _service_sort_key(item: str) -> tuple:
+            meta = get_mcp_service_metadata(item)
+            if item in locked_order:
+                return (0, locked_order[item], meta["display_name"].lower(), item)
+            return (1, meta["display_name"].lower(), item)
+
+        for name in sorted(all_names, key=_service_sort_key):
             meta = get_mcp_service_metadata(name)
             installed = name in installed_names
+            locked = is_locked_mcp_service(name)
             enabled = is_mcp_service_enabled(name, config_data)
             roles_using = role_usage.get(name, [])
             status = "ready"
@@ -2548,6 +2555,8 @@ class McpServiceManager:
                 "display_name": meta["display_name"],
                 "description": meta["description"],
                 "is_core": meta["is_core"],
+                "is_locked": locked,
+                "can_toggle": bool(installed and not locked),
                 "installed": installed,
                 "enabled": enabled,
                 "status": status,
@@ -2567,15 +2576,15 @@ class McpServiceManager:
         installed_count = sum(1 for item in services if item["installed"])
         enabled_count = sum(1 for item in services if item["installed"] and item["enabled"])
         core_missing = [item["display_name"] for item in services if item["is_core"] and not item["installed"]]
+        locked_missing = [item["display_name"] for item in services if item["is_locked"] and not item["installed"]]
         return {
             "summary": {
                 "installed_count": installed_count,
                 "enabled_count": enabled_count,
                 "core_missing": core_missing,
+                "locked_missing": locked_missing,
             },
             "services": services,
-            "core_services": [item for item in services if item["is_core"]],
-            "other_services": [item for item in services if not item["is_core"]],
             "install_help": {
                 "import_title": "从官方文档粘贴配置",
                 "import_body": "如果第三方文档给了 MCP 配置 JSON，可以直接粘贴到这里导入。",
@@ -2594,7 +2603,13 @@ class McpServiceManager:
         for name, enabled in service_states.items():
             if name not in known_names:
                 return f"未知 MCP：{name}"
+            if is_locked_mcp_service(name) and not bool(enabled):
+                display_name = get_mcp_service_metadata(name)["display_name"]
+                return f"{display_name} 是系统内置 MCP，不能关闭"
             state[name] = {"enabled": bool(enabled)}
+        for name in LOCKED_MCP_SERVICE_NAMES:
+            if name in known_names:
+                state[name] = {"enabled": True}
         write_config_data(config_data)
         return None
 

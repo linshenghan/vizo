@@ -5,7 +5,8 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from lib.project_identity import detect_project as detect_runtime_project
 from lib.paths import iter_task_dirs
@@ -14,7 +15,7 @@ from lib.paths import iter_task_dirs
 def main():
     # 自动检测当前项目
     cwd = Path.cwd()
-    project_root = Path(__file__).resolve().parent
+    project_root = PROJECT_ROOT
     project_name = detect_runtime_project(str(cwd))
     if project_name == 'vizo':
         project_path = project_root

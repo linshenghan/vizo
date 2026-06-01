@@ -1,0 +1,122 @@
+{
+  "_comment": "Opus V6 配置文件模板 — 复制为 config.json 后按需填写",
+  "version": "4.0",
+  "custom_domain": "your-domain.example.com",
+  "projects": {
+    "my-project": {
+      "path": "/workspace",
+      "type": "dev",
+      "description": "我的项目"
+    }
+  },
+  "model_overrides": {},
+  "max_concurrent_agents": 3,
+  "budget": {
+    "daily_limit_usd": 50,
+    "warn_threshold": 0.8,
+    "stop_threshold": 0.95
+  },
+  "external_models": {
+    "anthropic": {
+      "api_key": "sk-ant-xxxx（或通过 ANTHROPIC_API_KEY 环境变量注入）",
+      "base_url": "https://api.anthropic.com",
+      "env": {
+        "ANTHROPIC_DEFAULT_OPUS_MODEL": "",
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": "",
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": ""
+      }
+    },
+    "glm": {
+      "api_key": "（可选，通过 GLM_API_KEY 环境变量注入）",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4"
+    },
+    "deepseek": {
+      "api_key": "（可选，通过 DEEPSEEK_API_KEY 环境变量注入）",
+      "base_url": "https://api.deepseek.com"
+    },
+    "glm-5": {
+      "cli_model": "sonnet",
+      "label": "GLM-5",
+      "env": {
+        "ANTHROPIC_API_KEY": "your-glm-api-key-here",
+        "ANTHROPIC_BASE_URL": "https://open.bigmodel.cn/api/anthropic",
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-5",
+        "API_TIMEOUT_MS": "3000000",
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+      }
+    }
+  },
+  "web_console": {
+    "enabled": true,
+    "token": "your-password-here",
+    "max_sessions": 3,
+    "idle_timeout_suspend": 1800,
+    "idle_timeout_terminate": 7200,
+    "cookie_max_age_days": 30
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6380,
+    "db": 0,
+    "password": "",
+    "container_name": "opus-collab-redis",
+    "cache_ttl": 3600,
+    "memory_ttl": 86400
+  },
+  "wecom": {
+    "enabled": false,
+    "corp_id": "your-corp-id",
+    "corp_secret": "your-corp-secret（或通过 WECOM_CORP_SECRET 环境变量注入）",
+    "agent_id": 1000002,
+    "callback_server": {
+      "url": "https://your-domain.example.com/wecom/callback",
+      "token": "your-callback-token",
+      "encoding_aes_key": "your-encoding-aes-key"
+    }
+  },
+  "secrets": {
+    "wxpusher_app_token": "your-wxpusher-token",
+    "wxpusher_uid": "your-wxpusher-uid",
+    "wecom_corpid": "your-corp-id",
+    "wecom_agentid": "1000002",
+    "wecom_secret": "your-wecom-secret",
+    "wecom_userid": "your-userid",
+    "modelscope_api_key": "your-modelscope-api-key",
+    "github_token": "your-github-token"
+  },
+  "confirm_server": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 9380,
+    "external_host": "",
+    "tunnel_provider": "auto",
+    "tunnel_providers": {
+      "natapp": {
+        "enabled": false,
+        "priority": 2,
+        "authtoken": "your-natapp-authtoken",
+        "domain": "http://your-natapp-domain.natappfree.cc"
+      },
+      "cpolar": {
+        "enabled": false,
+        "priority": 3,
+        "authtoken": "your-cpolar-authtoken"
+      },
+      "cloudflare": {
+        "enabled": true,
+        "priority": 1
+      }
+    },
+    "health_check_interval": 30,
+    "auto_switch_on_failure": true
+  },
+  "wecom_callback": {
+    "token": "your-wecom-callback-token",
+    "encoding_aes_key": "your-wecom-encoding-aes-key"
+  },
+  "wecom_bot_callback": {
+    "_comment": "智能机器人回调配置（安全与管理-管理工具中创建的机器人）",
+    "token": "your-bot-callback-token",
+    "encoding_aes_key": "your-bot-encoding-aes-key"
+  }
+}

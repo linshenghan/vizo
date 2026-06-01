@@ -1519,9 +1519,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
   color: var(--text-secondary);
 }
-.mcp-service-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.8rem;
-}
 .mcp-service-list {
   display: flex; flex-direction: column; gap: 0.65rem;
 }
@@ -1530,9 +1527,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
   background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
   border-radius: 12px;
   padding: 0.95rem;
-}
-.mcp-service-card.core {
-  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
 }
 .mcp-service-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 0.8rem;
@@ -2580,8 +2574,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
                   <label>预设模板</label>
                   <select id="new-provider-template" onchange="onMainProviderTemplateChange()"></select>
                 </div>
-                <div id="main-provider-guide" class="settings-guide-card" style="margin:-0.1rem 0 0.9rem"></div>
-                <div id="main-interface-guides" class="settings-guide-grid"></div>
                 <div class="settings-field" id="main-openai-auth-mode-field" style="display:none">
                   <label>授权方式</label>
                   <select id="new-openai-auth-mode" onchange="onMainOpenAIAuthModeChange()">
@@ -2593,33 +2585,24 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
                   <label>Base URL</label>
                   <input type="text" id="new-baseurl" placeholder="https://api.anthropic.com（留空使用当前接入默认地址）" autocomplete="off">
                 </div>
-	                <div class="model-info" style="margin:-0.2rem 0 0.7rem">
-	                  这里仅配置默认连接，不会修改当前运行中的主会话。`Claude` 用于官方或中转的 Claude 接口，`Anthropic 兼容接口` 用于像 GLM 这类需要模型映射的平台，`OpenAPI` 用于官方或中转的 OpenAPI 根路径；Base URL 请填写根路径，不要直接填具体 endpoint。
-	                </div>
                 <div class="settings-field" id="main-api-key-field">
                   <label>API Key</label>
                   <input type="text" id="new-apikey" placeholder="输入 API Key" autocomplete="off">
                 </div>
                 <div id="main-openai-auth-panel" class="settings-guide-card" style="display:none;margin:-0.1rem 0 0.9rem"></div>
-                <div id="main-model-mapping-note" class="model-info" style="margin:-0.2rem 0 0.7rem">
-                  Claude 官方连接无需填写模型 ID 映射。
-                </div>
                 <div id="main-model-mapping-fields" style="display:none">
                   <div class="settings-field">
                     <label>Opus 对应模型 ID</label>
-                    <input type="text" id="new-default-opus-model" placeholder="例如：glm-5" autocomplete="off" oninput="renderMainRoutingInfo()">
+                    <input type="text" id="new-default-opus-model" placeholder="例如：glm-5" autocomplete="off">
                   </div>
                   <div class="settings-field">
                     <label>Sonnet 对应模型 ID</label>
-                    <input type="text" id="new-default-sonnet-model" placeholder="例如：glm-4.7" autocomplete="off" oninput="renderMainRoutingInfo()">
+                    <input type="text" id="new-default-sonnet-model" placeholder="例如：glm-4.7" autocomplete="off">
                   </div>
                   <div class="settings-field">
                     <label>Haiku 对应模型 ID</label>
-                    <input type="text" id="new-default-haiku-model" placeholder="例如：glm-4.5-air" autocomplete="off" oninput="renderMainRoutingInfo()">
+                    <input type="text" id="new-default-haiku-model" placeholder="例如：glm-4.5-air" autocomplete="off">
                   </div>
-                </div>
-                <div id="main-provider-routing" class="model-info" style="margin:-0.2rem 0 0">
-                  主会话和 CLI 切换别名沿用这里的映射；角色配置会显示当前主会话连接可用的具体模型。
                 </div>
               </div>
               <div class="settings-subsection">
@@ -2677,14 +2660,7 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
               <div class="settings-panel-desc">管理 AI 可用的工具。先在这里开启，再到角色配置里分配给角色。</div>
               <div id="mcp-tools-overview"></div>
               <div class="settings-subsection">
-                <div class="settings-subsection-title">重点工具</div>
-                <div id="mcp-core-list" class="mcp-service-grid">
-                  <div style="text-align:center;color:var(--text-muted);padding:1rem">加载中...</div>
-                </div>
-              </div>
-              <div class="settings-subsection">
-                <div class="settings-subsection-title">其他工具</div>
-                <div id="mcp-other-list" class="mcp-service-list">
+                <div id="mcp-service-list" class="mcp-service-list">
                   <div style="text-align:center;color:var(--text-muted);padding:1rem">加载中...</div>
                 </div>
               </div>
@@ -7937,10 +7913,8 @@ function _reloadSettingsDrafts() {
   if (modelTable) {
     modelTable.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem">加载中...</div>';
   }
-  const mcpCore = document.getElementById('mcp-core-list');
-  const mcpOther = document.getElementById('mcp-other-list');
-  if (mcpCore) mcpCore.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载中...</div>';
-  if (mcpOther) mcpOther.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载中...</div>';
+  const mcpList = document.getElementById('mcp-service-list');
+  if (mcpList) mcpList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载中...</div>';
   ['old-password', 'new-password', 'confirm-password'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -8089,7 +8063,6 @@ document.addEventListener('input', function(e) {
   if (!panel) return;
   const section = panel.dataset.section;
   if (section === 'main-session') {
-    renderMainRoutingInfo();
     const result = document.getElementById('conn-test-result');
     if (result) {
       result.textContent = '';
@@ -8375,15 +8348,17 @@ function _renderMcpStatusPopup(service, state) {
 function _renderMcpServiceCard(service) {
   const state = _getMcpDraftState(service);
   const enabled = _getMcpDraftEnabled(service);
+  const locked = !!service.is_locked;
   const roleText = service.roles_using_count > 0
     ? '当前有 ' + service.roles_using_count + ' 个角色正在使用'
     : '当前没有角色使用';
   const roleList = service.roles_using_count > 0
     ? service.roles_using.map(_getRoleDisplayName).join('、')
     : '可到“角色配置”页分配给角色。';
-  const toggleDisabled = !service.installed;
+  const toggleDisabled = !service.installed || locked || service.can_toggle === false;
+  const toggleText = locked ? '固定开启' : (enabled ? '关闭' : '开启');
   const popupId = _mcpPopupId(service.name);
-  let html = '<div class="mcp-service-card' + (service.is_core ? ' core' : '') + '">';
+  let html = '<div class="mcp-service-card">';
   html += '<div class="mcp-service-head">';
   html += '<div><div class="mcp-service-title">' + escapeHtml(service.display_name) + '</div>';
   html += '<div class="mcp-service-desc">' + escapeHtml(service.description || '') + '</div></div>';
@@ -8401,7 +8376,7 @@ function _renderMcpServiceCard(service) {
     html += '</div>';
   }
   html += '<div class="mcp-service-actions">';
-  html += '<button class="settings-btn-secondary mcp-service-toggle" data-name="' + escapeHtml(service.name) + '" data-enabled="' + (enabled ? '1' : '0') + '" data-orig-enabled="' + (service.enabled ? '1' : '0') + '"' + (toggleDisabled ? ' disabled' : '') + ' onclick="toggleMcpServiceDraft(this.dataset.name)">' + (enabled ? '关闭' : '开启') + '</button>';
+  html += '<button class="settings-btn-secondary mcp-service-toggle" data-name="' + escapeHtml(service.name) + '" data-enabled="' + (enabled ? '1' : '0') + '" data-orig-enabled="' + (service.enabled ? '1' : '0') + '"' + (toggleDisabled ? ' disabled' : '') + ' onclick="toggleMcpServiceDraft(this.dataset.name)">' + escapeHtml(toggleText) + '</button>';
   if (service.can_repair && (state.status === 'missing' || state.status === 'error')) {
     html += '<button class="settings-btn-secondary" data-name="' + escapeHtml(service.name) + '" onclick="repairMcpService(this.dataset.name)">' + (service.name === 'serena' ? '一键修复' : '修复服务') + '</button>';
   }
@@ -8414,39 +8389,37 @@ function _renderMcpServiceCard(service) {
 
 function renderMcpTools() {
   const overviewEl = document.getElementById('mcp-tools-overview');
-  const coreEl = document.getElementById('mcp-core-list');
-  const otherEl = document.getElementById('mcp-other-list');
+  const listEl = document.getElementById('mcp-service-list');
   if (!_mcpServicesData) {
-    if (coreEl) coreEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载失败，请刷新重试</div>';
-    if (otherEl) otherEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载失败，请刷新重试</div>';
+    if (listEl) listEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载失败，请刷新重试</div>';
     return;
   }
 
   const summary = _mcpServicesData.summary || {};
-  const missingCore = summary.core_missing || [];
+  const missingLocked = summary.locked_missing || summary.core_missing || [];
   if (overviewEl) {
     let cls = 'settings-note info';
     let text = '当前已发现 ' + (summary.installed_count || 0) + ' 个工具，已开启 ' + (summary.enabled_count || 0) + ' 个。先在这里开启，再到“角色配置”里分配给角色。';
-    if (missingCore.includes('Serena')) {
+    if (missingLocked.includes('Serena')) {
       cls = 'settings-note error';
       text = '未检测到 Serena。系统记忆依赖它，建议立即点击“一键修复”。';
-    } else if (missingCore.includes('Chrome MCP')) {
-      cls = 'settings-note warn';
-      text = '未检测到 Chrome MCP。前端测试能力会受限，建议点击“修复服务”并打开连接引导。';
+    } else if (missingLocked.includes('Vizo Router')) {
+      cls = 'settings-note error';
+      text = '未检测到 Vizo Router。主会话语义路由和交互设计流程依赖它，建议立即点击“修复服务”。';
     }
     overviewEl.className = cls;
     overviewEl.textContent = text;
   }
 
-  coreEl.innerHTML = (_mcpServicesData.core_services || []).map(_renderMcpServiceCard).join('') ||
-    '<div style="color:var(--text-muted)">暂无重点工具</div>';
-  otherEl.innerHTML = (_mcpServicesData.other_services || []).map(_renderMcpServiceCard).join('') ||
-    '<div style="color:var(--text-muted)">暂未安装其他工具</div>';
+  if (listEl) {
+    listEl.innerHTML = (_mcpServicesData.services || []).map(_renderMcpServiceCard).join('') ||
+      '<div style="color:var(--text-muted)">暂未安装 MCP 工具</div>';
+  }
 }
 
 function _syncChromeStatusIntoMcpTools(status, shouldRender) {
   if (!_mcpServicesData || !status) return;
-  ['services', 'core_services', 'other_services'].forEach(function(key) {
+  ['services'].forEach(function(key) {
     const list = _mcpServicesData[key];
     if (!Array.isArray(list)) return;
     _mcpServicesData[key] = list.map(function(item) {
@@ -8491,8 +8464,7 @@ function _syncChromeStatusIntoMcpTools(status, shouldRender) {
 }
 
 async function loadMcpTools() {
-  const coreEl = document.getElementById('mcp-core-list');
-  const otherEl = document.getElementById('mcp-other-list');
+  const listEl = document.getElementById('mcp-service-list');
   try {
     const res = await fetch('/vizo/console/api/settings/mcp-services');
     if (res.status === 401) { showToast('请先登录', 'error'); return; }
@@ -8502,8 +8474,7 @@ async function loadMcpTools() {
     renderMcpTools();
     _refreshSettingsSectionState('mcp-tools');
   } catch (e) {
-    if (coreEl) coreEl.innerHTML = '<div style="color:var(--danger);padding:1rem">加载失败，请刷新重试</div>';
-    if (otherEl) otherEl.innerHTML = '<div style="color:var(--danger);padding:1rem">加载失败，请刷新重试</div>';
+    if (listEl) listEl.innerHTML = '<div style="color:var(--danger);padding:1rem">加载失败，请刷新重试</div>';
   }
 }
 
@@ -8511,6 +8482,14 @@ async function toggleMcpServiceDraft(name) {
   const service = _findMcpService(name);
   const btn = document.querySelector('.mcp-service-toggle[data-name="' + name + '"]');
   if (!service || !btn || !service.installed) return;
+  if (service.is_locked) {
+    showToast(service.display_name + ' 是系统内置 MCP，保持开启', 'info');
+    return;
+  }
+  if (service.can_toggle === false) {
+    showToast(service.display_name + ' 当前不可切换', 'warning');
+    return;
+  }
   const current = !!service.enabled;
   const next = !current;
   if (!next && service.roles_using_count > 0) {
@@ -8671,129 +8650,6 @@ const MAIN_PROVIDER_TEMPLATE_OPTIONS = {
     {id: 'mimo', display: 'MiMo'}
   ]
 };
-const MAIN_INTERFACE_GUIDES = [
-  {
-    id: 'anthropic_compatible',
-    title: 'Anthropic 兼容接口',
-    badge: '需要映射',
-    badgeClass: 'ok',
-    body: '用于像 GLM、DeepSeek、MiniMax、MiMo 这类需要把 opus / sonnet / haiku 映射到实际模型名的平台。它描述的是接入方式，不是厂商名称。',
-    rows: [
-      {key: '适用场景', value: '平台要求填写实际模型名，而不是直接使用 Claude 别名'},
-      {key: '是否需要映射', value: '需要，Opus / Sonnet / Haiku 至少填写一项'},
-      {key: '常见入口', value: 'https://.../anthropic、https://.../claude'}
-    ]
-  },
-  {
-    id: 'openai_compatible',
-    title: 'OpenAPI',
-    badge: '官方 / 中转',
-    badgeClass: 'ok',
-    body: '用于 OpenAI 官方 API，或提供原生 OpenAPI 根路径的中转平台。这里不是“任意 OpenAI 兼容接口”入口。',
-    rows: [
-      {key: '常见入口', value: '/v1、或像 /codex/v1 这类供应商提供的 OpenAPI 根路径'},
-      {key: '适用场景', value: 'OpenAI 官方 API，或 OpenAI / Codex 中转入口'},
-      {key: '不适用', value: 'Gemini、OpenRouter 等仅协议兼容但不是 OpenAPI 直连入口的平台'}
-    ]
-  }
-];
-let _mainRuntimeDiagnostics = null;
-let _mainRuntimeDiagnosticsKey = '';
-let _mainRuntimeDiagnosticsPendingKey = '';
-let _mainRuntimeDiagnosticsLoading = false;
-let _mainRuntimeDiagnosticsTimer = null;
-
-function getMainRuntimeDiagnosticsDraftPayload() {
-  const apikeyInput = document.getElementById('new-apikey');
-  const rawKey = apikeyInput?.value.trim() || '';
-  const masked = apikeyInput?.dataset.masked || '';
-  const payload = buildMainProviderPayload();
-  if (payload.auth_mode !== 'account_login') {
-    const apiKey = (rawKey && rawKey !== masked) ? rawKey : '__USE_STORED__';
-    payload.api_key = apiKey;
-  }
-  payload.probe_scope = 'all';
-  if (S.activeSessionId) payload.active_session_id = S.activeSessionId;
-  return payload;
-}
-
-function getMainRuntimeDiagnosticsKey(payload) {
-  const draft = Object.assign({}, payload || {});
-  draft.api_key_state = draft.api_key === '__USE_STORED__' ? '__USE_STORED__' : (draft.api_key ? '__CUSTOM__' : '');
-  delete draft.api_key;
-  return JSON.stringify(draft);
-}
-
-function renderRuntimeIssueEntries(items, color) {
-  if (!items || !items.length) return '';
-  return '<div style="margin-top:0.35rem;display:flex;flex-direction:column;gap:0.22rem">'
-    + items.map(function(item) {
-      return '<div style="color:' + escapeHtml(color) + '">• ' + escapeHtml(item.message || item.code || '') + '</div>';
-    }).join('')
-    + '</div>';
-}
-
-function renderRuntimeCandidateList(items) {
-  if (!items || !items.length) return '';
-  return '<div style="margin-top:0.45rem;display:flex;flex-direction:column;gap:0.28rem">'
-    + items.map(function(item) {
-      const badgeColor = item.supported ? 'var(--green)' : (item.category === 'compatibility' ? 'var(--warning)' : 'var(--danger)');
-      const badgeBg = item.supported ? 'rgba(34,197,94,0.12)' : (item.category === 'compatibility' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)');
-      return '<div style="padding:0.42rem 0.55rem;border:1px solid var(--border-subtle);border-radius:6px;background:rgba(15,23,42,0.12)">'
-        + '<div style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap">'
-        + '<span style="font-weight:600;color:var(--text-primary)">' + escapeHtml(item.label || item.runtime_kind || '') + '</span>'
-        + '<span style="display:inline-flex;align-items:center;padding:0.08rem 0.38rem;border-radius:999px;font-size:0.64rem;line-height:1.2;border:1px solid color-mix(in srgb,' + escapeHtml(badgeColor) + ' 26%, transparent);background:' + escapeHtml(badgeBg) + ';color:' + escapeHtml(badgeColor) + '">'
-        + escapeHtml(item.supported ? '可用' : (item.category === 'compatibility' ? '兼容保留' : '不可用'))
-        + '</span>'
-        + '</div>'
-        + '<div style="margin-top:0.22rem;color:var(--text-muted)">' + escapeHtml(item.summary || '') + '</div>'
-        + (item.provider_model ? '<div style="margin-top:0.18rem;color:var(--text-muted)">上游模型：' + escapeHtml(item.provider_model) + '</div>' : '')
-        + renderRuntimeIssueEntries(item.blocking_issues || [], 'var(--danger)')
-        + '</div>';
-    }).join('')
-    + '</div>';
-}
-
-function scheduleMainRuntimeDiagnosticsRefresh(immediate) {
-  const payload = getMainRuntimeDiagnosticsDraftPayload();
-  const key = getMainRuntimeDiagnosticsKey(payload);
-  if (_mainRuntimeDiagnosticsKey === key && _mainRuntimeDiagnostics) return;
-  if (_mainRuntimeDiagnosticsPendingKey === key && _mainRuntimeDiagnosticsLoading) return;
-  if (_mainRuntimeDiagnosticsTimer) {
-    clearTimeout(_mainRuntimeDiagnosticsTimer);
-    _mainRuntimeDiagnosticsTimer = null;
-  }
-  const runner = function() { refreshMainRuntimeDiagnostics(payload, key); };
-  if (immediate) {
-    runner();
-  } else {
-    _mainRuntimeDiagnosticsTimer = setTimeout(runner, 180);
-  }
-}
-
-async function refreshMainRuntimeDiagnostics(payload, key) {
-  _mainRuntimeDiagnosticsPendingKey = key;
-  _mainRuntimeDiagnosticsLoading = true;
-  try {
-    const r = await fetch('/vizo/console/api/runtime/diagnostics', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) return;
-    const d = await r.json();
-    if (_mainRuntimeDiagnosticsPendingKey !== key) return;
-    _mainRuntimeDiagnostics = d;
-    _mainRuntimeDiagnosticsKey = key;
-  } catch(e) {
-  } finally {
-    if (_mainRuntimeDiagnosticsPendingKey === key) {
-      _mainRuntimeDiagnosticsLoading = false;
-    }
-    renderMainRoutingInfo(true);
-  }
-}
-
 async function loadApiKeyStatus() {
   const el = document.getElementById('apikey-status');
   try {
@@ -8844,12 +8700,8 @@ async function loadApiKeyStatus() {
       input.value = fieldMap[inputId];
       input.dataset.orig = fieldMap[inputId];
     });
-    _mainRuntimeDiagnostics = d.runtime_diagnostics || null;
     updateMainProviderFields(false);
     updateMainOpenAIAuthUi(d);
-    _mainRuntimeDiagnosticsKey = _mainRuntimeDiagnostics ? getMainRuntimeDiagnosticsKey(getMainRuntimeDiagnosticsDraftPayload()) : '';
-    renderMainRoutingInfo();
-    scheduleMainRuntimeDiagnosticsRefresh(true);
   } catch(e) { el.textContent = '加载失败'; }
   _refreshSettingsSectionState('main-session');
 }
@@ -9132,117 +8984,6 @@ function getExternalBaseUrlValidationMessage(baseUrl, accessMode) {
   return '';
 }
 
-function getMainProviderGuideData() {
-  const groupId = document.getElementById('new-provider')?.value || 'claude';
-  const providerId = getEffectiveMainProviderId();
-  const providerLabel = getMainProviderLabel(providerId);
-  const baseUrl = document.getElementById('new-baseurl')?.value.trim() || (getMainProviderOption(providerId)?.default_base_url || '');
-  if (groupId === 'claude' && providerId === 'anthropic') {
-    return {
-      title: 'Claude',
-      badge: '官方直连',
-      badgeClass: 'ok',
-      rows: [
-        {key: '来源', value: 'Anthropic 官方'},
-        {key: '协议', value: 'Anthropic 兼容接口'},
-        {key: '主会话/子代理', value: '可直接使用'},
-        {key: '适用模型', value: 'Claude 官方模型'},
-        {key: '说明', value: '这一类不需要填写模型映射，直接按 Claude 原生模型工作'}
-      ]
-    };
-  }
-  if (groupId === 'claude' && providerId === 'custom') {
-    return {
-      title: 'Claude',
-      badge: '第三方代理',
-      badgeClass: 'ok',
-      rows: [
-        {key: '来源', value: '第三方 Claude 代理或中转平台'},
-        {key: '协议', value: 'Anthropic 兼容接口'},
-        {key: '主会话/子代理', value: '可直接使用'},
-        {key: '适用模型', value: 'Claude 模型'},
-        {key: '说明', value: (baseUrl ? baseUrl + ' ' : '') + '如果平台本质是转发 Claude，而不是要求你填写外部模型名，就归到这一类'}
-      ]
-    };
-  }
-  if (groupId === 'anthropic_compatible' && providerId === 'gateway') {
-    return {
-      title: 'Anthropic 兼容接口',
-      badge: '第三方适配',
-      badgeClass: 'ok',
-      rows: [
-        {key: '来源', value: '需要你自己填写模型映射的平台'},
-        {key: '协议', value: 'Anthropic 兼容接口'},
-        {key: '主会话/子代理', value: '可直接使用，但必须填写模型映射'},
-        {key: '适用模型', value: '像 GLM 这类由平台定义实际模型名的模型'},
-        {key: '说明', value: '这里填的是 Anthropic 根路径；同时把 Opus / Sonnet / Haiku 映射到平台真实模型名'}
-      ]
-    };
-  }
-  if (groupId === 'openai_compatible') {
-    return {
-      title: 'OpenAPI',
-      badge: '官方 / 中转',
-      badgeClass: 'ok',
-      rows: [
-        {key: '来源', value: 'OpenAI 官方 API，或提供原生 OpenAPI 根路径的中转平台'},
-        {key: '协议', value: 'OpenAPI'},
-        {key: '主会话/子代理', value: '主会话优先走 OpenAPI 直连 runtime；子代理按 runtime policy 决策'},
-        {key: '是否需要模型映射', value: '不需要，系统会使用内置默认模型'},
-        {key: '说明', value: (baseUrl ? baseUrl + ' ' : '') + '这里只用于官方 API 或中转 API；不接受 Gemini / OpenRouter 这类兼容接口'}
-      ]
-    };
-  }
-  const vendorRows = {
-    glm: '已内置 GLM 的默认模型映射，可直接使用，也可按平台实际模型名调整',
-    deepseek: '已内置 DeepSeek 的默认模型映射，可直接使用，也可按平台实际模型名调整',
-    minimax: '已内置 MiniMax 的默认模型映射，可直接使用，也可按平台实际模型名调整',
-    mimo: '已内置 MiMo 的默认模型映射，可直接使用，也可按平台实际模型名调整',
-    qwen: '若平台提供的是 Anthropic 兼容入口，可在这里填写映射；若只给 OpenAPI 根地址，则应改用 OpenAPI'
-  };
-  return {
-    title: 'Anthropic 兼容接口',
-    badge: '预设模板',
-    badgeClass: 'ok',
-    rows: [
-      {key: '模板来源', value: providerLabel + ' 官方'},
-      {key: '协议', value: 'Anthropic 兼容接口'},
-      {key: '主会话/子代理', value: '可直接使用'},
-      {key: '适用模型', value: '该模板官方支持的模型'},
-      {key: '说明', value: vendorRows[providerId] || '该模板已提供 Claude Code 所需的 Anthropic 兼容入口'}
-    ]
-  };
-}
-
-function renderMainProviderGuide() {
-  const el = document.getElementById('main-provider-guide');
-  if (!el) return;
-  const guide = getMainProviderGuideData();
-  let html = '<div class="settings-guide-title"><strong>' + escapeHtml(guide.title) + '</strong><span class="settings-guide-badge ' + escapeHtml(guide.badgeClass || '') + '">' + escapeHtml(guide.badge || '') + '</span></div>';
-  html += '<div class="settings-guide-body">';
-  (guide.rows || []).forEach(function(row) {
-    html += '<div class="settings-guide-row"><span class="settings-guide-key">' + escapeHtml(row.key) + '</span><span class="settings-guide-value">' + escapeHtml(row.value) + '</span></div>';
-  });
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function renderMainInterfaceGuides() {
-  const el = document.getElementById('main-interface-guides');
-  if (!el) return;
-  let html = '';
-  MAIN_INTERFACE_GUIDES.forEach(function(guide) {
-    html += '<div class="settings-guide-card">';
-    html += '<div class="settings-guide-title"><strong>' + escapeHtml(guide.title) + '</strong><span class="settings-guide-badge ' + escapeHtml(guide.badgeClass || '') + '">' + escapeHtml(guide.badge || '') + '</span></div>';
-    html += '<div class="settings-guide-body">' + escapeHtml(guide.body || '') + '</div>';
-    (guide.rows || []).forEach(function(row) {
-      html += '<div class="settings-guide-row"><span class="settings-guide-key">' + escapeHtml(row.key) + '</span><span class="settings-guide-value">' + escapeHtml(row.value) + '</span></div>';
-    });
-    html += '</div>';
-  });
-  el.innerHTML = html;
-}
-
 function renderMainProviderOptions(selectedId) {
   const el = document.getElementById('new-provider');
   if (!el) return;
@@ -9299,9 +9040,7 @@ function updateMainProviderFields(usePresetDefaults) {
   const provider = getMainProviderOption(providerId);
   const baseUrlInput = document.getElementById('new-baseurl');
   const wrap = document.getElementById('main-model-mapping-fields');
-  const note = document.getElementById('main-model-mapping-note');
   const isGateway = providerId === 'gateway';
-  const isCustom = providerId === 'custom';
   const isOpenAI = providerGroupId === 'openai_compatible';
   const isClaude = providerGroupId === 'claude';
   if (wrap) wrap.style.display = (isClaude || isOpenAI) ? 'none' : '';
@@ -9312,24 +9051,6 @@ function updateMainProviderFields(usePresetDefaults) {
       ? '例如：https://code.newcli.com/claude（不能填写 /codex/v1）'
       : 'https://api.anthropic.com（留空使用当前接入默认地址）');
   }
-  if (note) {
-    let noteText = '已为当前接入预填默认模型 ID。可修改，且 Opus / Sonnet / Haiku 三项至少填写一项。';
-    if (isClaude && providerId === 'anthropic') {
-      noteText = 'Claude 类型无需填写模型 ID 映射。';
-    } else if (isClaude && isCustom) {
-      noteText = '这是 Claude 直转类型。国内代理平台如果只是转发 Claude，就选这里，无需填写模型 ID 映射。';
-    } else if (isOpenAI) {
-      noteText = getSelectedMainOpenAIAuthMode() === 'account_login'
-        ? 'OpenAI 账号登录只支持官方 OpenAI API。该模式不会读取当前 CLI 的登录态，需按保存连接单独登录。'
-        : 'OpenAPI 适用于官方 API 和提供原生 OpenAPI 根路径的中转平台。这里不需要填写模型映射，也不支持 Gemini / OpenRouter 这类仅协议兼容的平台。';
-    } else if (isGateway) {
-      noteText = 'Anthropic 兼容接口用于像 GLM 这类需要模型映射的平台；请把 Opus / Sonnet / Haiku 映射到平台实际模型名，至少填写一项。';
-    } else {
-      noteText = '已按当前预设模板带入默认 Base URL 和模型映射；如果平台给你的模型名不同，可以直接改这里。';
-    }
-    note.textContent = noteText;
-  }
-
   if (provider && usePresetDefaults) {
     const baseUrlEl = document.getElementById('new-baseurl');
     if (baseUrlEl) baseUrlEl.value = provider.default_base_url || '';
@@ -9346,9 +9067,6 @@ function updateMainProviderFields(usePresetDefaults) {
     });
   }
   updateMainOpenAIAuthUi();
-  renderMainProviderGuide();
-  renderMainInterfaceGuides();
-  renderMainRoutingInfo();
 }
 
 function onMainProviderChange() {
@@ -9374,77 +9092,6 @@ function resetConnectionTestResult() {
   if (!result) return;
   result.textContent = '';
   result.innerHTML = '';
-}
-
-function renderMainRoutingInfo(skipRefresh) {
-  const el = document.getElementById('main-provider-routing');
-  if (!el) return;
-  renderMainProviderGuide();
-  renderMainInterfaceGuides();
-  if (!skipRefresh) scheduleMainRuntimeDiagnosticsRefresh();
-  const payload = getMainRuntimeDiagnosticsDraftPayload();
-  const payloadKey = getMainRuntimeDiagnosticsKey(payload);
-  const diagnostics = _mainRuntimeDiagnosticsKey === payloadKey ? _mainRuntimeDiagnostics : null;
-  const baseUrl = document.getElementById('new-baseurl')?.value.trim() || '';
-  const baseUrlWarning = getMainBaseUrlValidationMessage(baseUrl);
-  if (!diagnostics) {
-    el.innerHTML =
-      '<div style="color:var(--text-muted)">正在根据后端 diagnostics 计算主会话与子代理策略...</div>' +
-      (_mainRuntimeDiagnosticsLoading ? '<div style="margin-top:0.25rem;color:var(--text-muted)">当前规则由后端实时评估，前端不再自行推断 runtime。</div>' : '') +
-      (baseUrlWarning ? '<div style="margin-top:0.35rem;color:var(--warning)">' + escapeHtml(baseUrlWarning) + '</div>' : '');
-    return;
-  }
-  const main = diagnostics.main_session || {};
-  const resolved = main.resolved_connection || diagnostics.resolved_connection || {};
-  const route = main.route_decision || {};
-  const descriptor = main.descriptor || {};
-  const modeDisplay = getConnectionModeLabel(resolved.provider_id, resolved.provider_display);
-  const routingModels = resolved.routing_models || {};
-  const modelSummary = Object.keys(routingModels).length
-    ? ('Opus → ' + (routingModels.opus || '-') + '，Sonnet → ' + (routingModels.sonnet || '-') + '，Haiku → ' + (routingModels.haiku || '-'))
-    : '';
-  let html = '';
-  html += '<div><span style="color:var(--accent)">当前接入：</span>' + escapeHtml(modeDisplay || resolved.provider_display || '-') + '</div>';
-  html += '<div style="margin-top:0.25rem"><span style="color:var(--accent)">主会话主路径：</span>' + escapeHtml(route.label || route.runtime_family || '-') + ' · ' + escapeHtml(main.summary || route.reason_summary || route.reason || '') + '</div>';
-  if (descriptor.display_model || descriptor.provider_model) {
-    html += '<div style="margin-top:0.25rem;color:var(--text-muted)">显示模型：' + escapeHtml(descriptor.display_model || '-') + '；上游模型：' + escapeHtml(descriptor.provider_model || '-') + '</div>';
-  }
-  if (modelSummary) {
-    html += '<div style="margin-top:0.25rem;color:var(--text-muted)">' + escapeHtml(modelSummary) + '</div>';
-  }
-  if (resolved.routing_summary) {
-    html += '<div style="margin-top:0.25rem;color:var(--text-muted)">' + escapeHtml(resolved.routing_summary) + '</div>';
-  }
-  if (resolved.runtime_base_url) {
-    html += '<div style="margin-top:0.25rem;color:var(--text-muted)">运行时入口：' + escapeHtml(resolved.runtime_base_url) + '</div>';
-  }
-  html += renderRuntimeCandidateList(main.runtime_candidates || diagnostics.runtime_candidates || []);
-  html += renderRuntimeIssueEntries(main.blocking_issues || diagnostics.blocking_issues || [], 'var(--danger)');
-  html += renderRuntimeIssueEntries(main.warnings || diagnostics.warnings || [], 'var(--warning)');
-  if ((main.diagnostics || []).length) {
-    html += '<div style="margin-top:0.4rem;color:var(--text-muted)">后端判定：'
-      + escapeHtml((main.diagnostics || []).map(function(item) { return item.message || item.code || ''; }).join('；'))
-      + '</div>';
-  }
-  if (main.switch_policy && main.switch_policy.summary) {
-    html += '<div style="margin-top:0.35rem;color:var(--text-muted)">' + escapeHtml(main.switch_policy.summary) + '</div>';
-  }
-  if (diagnostics.subagent && diagnostics.subagent.summary) {
-    html += '<div style="margin-top:0.45rem;color:var(--text-muted)">子代理策略：' + escapeHtml(diagnostics.subagent.summary) + '</div>';
-  }
-  const legacy = diagnostics.legacy_cutover || {};
-  if (legacy.summary) {
-    let legacyColor = 'var(--green)';
-    if (legacy.status === 'legacy_dependency_detected') legacyColor = 'var(--danger)';
-    else if (legacy.status === 'migration_input_pending') legacyColor = 'var(--warning)';
-    html += '<div style="margin-top:0.45rem;color:' + escapeHtml(legacyColor) + '">旧项目依赖自检：' + escapeHtml(legacy.summary) + '</div>';
-    html += renderRuntimeIssueEntries(legacy.runtime_dependencies || [], 'var(--danger)');
-    html += renderRuntimeIssueEntries(legacy.migration_inputs || [], 'var(--warning)');
-  }
-  if (baseUrlWarning) {
-    html += '<div style="margin-top:0.35rem;color:var(--warning)">' + escapeHtml(baseUrlWarning) + '</div>';
-  }
-  el.innerHTML = html;
 }
 
 function buildMainProviderPayload() {
@@ -9518,13 +9165,6 @@ async function testConnection() {
     const d = await r.json();
     if (d.ok) {
       result.innerHTML = '<span style="color:var(--green)">✓ 连接成功 (' + d.latency_ms + 'ms)</span>';
-      if (d.runtime_diagnostics && d.runtime_diagnostics.main_session) {
-        result.innerHTML += '<div style="margin-top:0.35rem;color:var(--text-muted)">主会话主路径：'
-          + escapeHtml((d.runtime_diagnostics.main_session.route_decision || {}).label || '')
-          + ' · '
-          + escapeHtml(d.runtime_diagnostics.main_session.summary || '')
-          + '</div>';
-      }
       if (d.validated_models && d.validated_models.length) {
         const lines = d.validated_models.map(function(item) {
           const tiers = (item.tiers || []).join(' / ');
@@ -9540,13 +9180,6 @@ async function testConnection() {
       }
     } else {
       result.innerHTML = '<span style="color:var(--danger)">✗ ' + (d.error || '连接失败') + '</span>';
-      if (d.runtime_diagnostics && d.runtime_diagnostics.main_session) {
-        result.innerHTML += '<div style="margin-top:0.35rem;color:var(--text-muted)">主会话判断：'
-          + escapeHtml((d.runtime_diagnostics.main_session.route_decision || {}).label || '')
-          + ' · '
-          + escapeHtml(d.runtime_diagnostics.main_session.summary || '')
-          + '</div>';
-      }
       if (d.blocking_issues && d.blocking_issues.length) {
         result.innerHTML += '<div style="margin-top:0.35rem;color:var(--danger)">' + escapeHtml(d.blocking_issues.map(function(item) { return item.message || item.code || ''; }).join('；')) + '</div>';
       }

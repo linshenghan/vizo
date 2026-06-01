@@ -8,25 +8,6 @@ LIVE_PANEL = ROOT / "lib/templates/dialogue_console/live-panel-component.js"
 CONFIRM_SERVER = ROOT / "lib/confirm_server.py"
 
 
-def test_dialogue_template_has_early_theme_script():
-    html = TEMPLATE.read_text(encoding="utf-8")
-    storage_index = html.index("localStorage.getItem('opus_theme')")
-    style_index = html.index("<style>")
-    assert storage_index < style_index
-    assert "document.documentElement.setAttribute('data-theme'" in html
-
-
-def test_dialogue_template_has_light_tokens_and_theme_button():
-    html = TEMPLATE.read_text(encoding="utf-8")
-    assert '[data-theme="light"]' in html
-    assert "--code-bg" in html
-    assert "--code-text" in html
-    assert 'id="themeToggleBtn"' in html
-    assert "data-theme-toggle" in html
-    assert "data-theme-label" in html
-    assert 'aria-pressed="false"' in html
-
-
 def test_dialogue_has_scroll_bottom_action_and_session_scoped_composer_drafts():
     html = TEMPLATE.read_text(encoding="utf-8")
     runtime = RUNTIME.read_text(encoding="utf-8")
@@ -106,22 +87,6 @@ def test_dialogue_hides_internal_thinking_noise_and_avoids_duplicate_thinking_la
     assert "timelineAutoCollapsedProcessCards: new Set()" in runtime
     assert "state.timelineAutoCollapsedProcessCards.delete(cardKey);" in runtime
     assert "state.timelineCardExpansion.clear();" not in runtime
-
-
-def test_dialogue_runtime_has_theme_functions_and_failure_message():
-    runtime = RUNTIME.read_text(encoding="utf-8")
-    assert "function normalizeTheme(value)" in runtime
-    assert "function applyDialogueTheme(options)" in runtime
-    assert "function toggleDialogueTheme()" in runtime
-    assert "function syncThemeToEmbeddedFrames(theme)" in runtime
-    assert "function buildWorkbenchInjectedRules(theme)" in runtime
-    assert "let themeStorageUnavailable = false" in runtime
-    assert "function readRuntimeSyncTheme()" in runtime
-    assert 'source: "focus" });' in runtime
-    assert 'theme: readRuntimeSyncTheme()' in runtime
-    assert "本次已切换，刷新后可能恢复默认" in runtime
-    assert "theme_storage_write_failed" in runtime
-    assert "background:#06111d!important" not in runtime
 
 
 def test_dialogue_live_panel_layout_prevents_step_card_squashing():

@@ -900,10 +900,12 @@ class AgentHub:
 3. {output_requirement}
 """
 
+        memory_section = memory_instructions or "# 项目记忆启动要求\n（当前项目未声明额外白名单）"
+
         # 组装（feedback_text 紧跟 docs_text 之后）
         return (
             f"{role_template}\n\n---\n\n"
-            f"{memory_instructions or '# 项目记忆启动要求\\n（当前项目未声明额外白名单）'}\n\n---\n\n"
+            f"{memory_section}\n\n---\n\n"
             f"# 项目知识\n{knowledge_text or '（无项目知识）'}\n\n---\n\n"
             f"{step_section}\n\n---\n\n"
             f"# 本次任务的输入文档\n{docs_text}{feedback_text}\n\n---\n\n"

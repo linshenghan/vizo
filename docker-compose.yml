@@ -1,27 +1,46 @@
 services:
   vizo:
+    container_name: vizo-app
     build: .
+    image: ${VIZO_IMAGE_NAME:-vizo:latest}
+    working_dir: /app
+    command: ["python3", "/app/secretary.py"]
     ports:
       - "9390:9390"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - WEB_CONSOLE_TOKEN=${WEB_CONSOLE_TOKEN:-}
-      - WECOM_ENABLED=${WECOM_ENABLED:-false}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      HOME: /home/vizo
+      PATH: /opt/vizo-host/npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPUS_BRAND_EN: Vizo
+      OPUS_BRAND_ZH: 维造
+      PUBLIC_BASE_URL: ${VIZO_PUBLIC_BASE_URL:-http://127.0.0.1:9390}
+      VIZO_HOST_NPM_MOUNT: /opt/vizo-host/npm-global
+      VIZO_RUNTIME_NPM_PREFIX: /usr/local
+      WEB_CONSOLE_TOKEN: ${VIZO_WEB_CONSOLE_TOKEN:-}
+      WECOM_ENABLED: "false"
+      REDIS_HOST: vizo-redis
+      REDIS_PORT: "6379"
+      TZ: Asia/Shanghai
     volumes:
+      - .:/app
+      - ${VIZO_HOST_NPM_PREFIX:-./docker/empty-npm-prefix}:/opt/vizo-host/npm-global:ro
       - vizo_data:/app/.vizo
-      - ./.mcp.json:/app/.mcp.json
+      - vizo_logs:/app/logs
+      - vizo_home:/home/vizo
     depends_on:
-      - redis
+      - vizo-redis
     restart: unless-stopped
 
-  redis:
+  vizo-redis:
+    container_name: vizo-redis
     image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - redis_data:/data
+      - vizo_redis_data:/data
     restart: unless-stopped
 
 volumes:
   vizo_data:
-  redis_data:
+  vizo_logs:
+  vizo_home:
+  vizo_redis_data:

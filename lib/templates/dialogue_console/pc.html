@@ -4,17 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vizo Dialogue Console</title>
-<script>
-/* 必须在 CSS 前执行，避免保存亮色偏好后刷新时先闪暗色。 */
-(function(){
-  try {
-    var t = localStorage.getItem('opus_theme');
-    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
-  } catch(e) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
-})();
-</script>
 <link rel="stylesheet" href="/vizo/static/vendor/google-fonts.css">
 <link rel="stylesheet" href="/vizo/static/vendor/material-symbols.css">
 <style>
@@ -31,17 +20,6 @@
   --mono:"JetBrains Mono","SFMono-Regular","Cascadia Code","Source Code Pro",Menlo,Consolas,monospace;
   --sans:Inter,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC","Source Han Sans SC",sans-serif;
   --sidebar-w:288px;--right-panel-w:420px;--dialogue-content-max:900px;--dialogue-content-pad:10px;--session-image-rail-w:78px;
-}
-[data-theme="light"]{
-  --bg-base:#f6f8fa;--bg-raised:#ffffff;--bg-surface:#f0f3f6;--bg-overlay:#eaeef2;--bg-input:#ffffff;
-  --text-primary:#1f2328;--text-soft:#3d444d;--text-dim:#59636e;--text-faint:#818b98;
-  --accent:#0969da;--accent-strong:#0550ae;--accent-dim:rgba(9,105,218,.09);
-  --green:#1a7f37;--green-dim:rgba(26,127,55,.10);--yellow:#9a6700;--yellow-dim:rgba(154,103,0,.10);
-  --red:#cf222e;--red-dim:rgba(207,34,46,.10);--orange:#bc4c00;--purple:#8250df;--purple-dim:rgba(130,80,223,.09);
-  --border:rgba(31,35,40,.10);--border-strong:rgba(31,35,40,.16);
-  --code-bg:#f6f8fa;--code-text:#24292f;--code-border:rgba(31,35,40,.12);--log-bg:#f6f8fa;
-  --selection-bg:rgba(0,113,227,.18);--scrollbar-thumb:rgba(9,105,218,.42);--toast-bg:rgba(255,255,255,.96);
-  --sidebar-bg:#ffffff;--item-bg:rgba(246,248,250,.82);--item-bg-hover:#f0f3f6;--item-bg-active:#eaf3ff;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-base);color:var(--text-primary);font-family:var(--sans);font-size:13px;line-height:1.5}
@@ -586,48 +564,10 @@ body[data-mode="mobile"] .ev-attachments{max-width:min(88%,680px)}
 .task-monitor-subtask-empty{padding:12px;border:1px dashed var(--border-strong);border-radius:12px;color:var(--text-dim);font-size:11px;line-height:1.6}
 .task-monitor-footer{padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(12,26,42,.96)}
 .task-monitor-footer .btn{flex:1;justify-content:center;padding:11px 12px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-[data-theme="light"] .task-monitor-shell{background:var(--bg-raised)}
-[data-theme="light"] .task-monitor-header{background:var(--bg-surface)}
-[data-theme="light"] .task-monitor-footer{background:var(--bg-raised)}
-[data-theme="light"] .task-switch-trigger{background:var(--bg-input)}
-[data-theme="light"] .task-switch-menu{background:var(--bg-raised);box-shadow:0 18px 44px rgba(31,35,40,.14)}
-[data-theme="light"] .task-switch-item,
-[data-theme="light"] .task-monitor-step-card,
-[data-theme="light"] .task-monitor-subtask,
-[data-theme="light"] .task-monitor-cluster{background:var(--bg-raised)}
-[data-theme="light"] .task-monitor-empty-state,
-[data-theme="light"] .task-monitor-inline-cluster,
-[data-theme="light"] .task-monitor-subtask-empty{background:var(--bg-surface)}
-[data-theme="light"] .task-monitor-step-detail,
-[data-theme="light"] .task-monitor-subtask-body,
-[data-theme="light"] .task-monitor-substep{border-top-color:var(--border)}
-[data-theme="light"] .task-monitor-step-icon{background:var(--bg-surface);border-color:var(--border-strong)}
-[data-theme="light"] .task-monitor-status-dot{box-shadow:0 0 0 5px rgba(31,35,40,.06)}
-[data-theme="light"] .task-monitor-reminder{background:var(--bg-raised);border-color:var(--border);box-shadow:0 10px 24px rgba(31,35,40,.08)}
-[data-theme="light"] .task-monitor-substep.active{background:var(--accent-dim)}
-.conn-badge,.chrome-badge{display:flex;align-items:center;gap:4px;font-size:10px}
+.conn-badge{display:flex;align-items:center;gap:4px;font-size:10px}
 .conn-badge{color:var(--green)}
-.chrome-badge{appearance:none;border:0;background:transparent;color:var(--text-faint);padding:0}
-.chrome-badge.connected{color:var(--green)}
-.conn-badge::before,.chrome-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 4px currentColor}
+.conn-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 4px currentColor}
 .toolbar-actions{display:flex;align-items:center;gap:2px}
-.theme-toggle-btn{width:auto;min-width:96px;padding:0 9px;gap:6px}
-.theme-toggle-btn .material-symbols-outlined{font-size:17px}
-.theme-toggle-label{font-size:10px;font-weight:700;white-space:nowrap;color:inherit}
-.chrome-status{display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:var(--text-dim);padding:.25rem .55rem;background:var(--bg-surface);border-radius:12px;cursor:pointer;position:relative;border:1px solid transparent;transition:border-color .2s}
-.chrome-status:hover{border-color:var(--border-strong)}
-.chrome-status .chr-dot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0}
-.chrome-status.on .chr-dot{background:var(--green);box-shadow:0 0 5px var(--green)}
-.chrome-status.waiting .chr-dot{background:var(--yellow);box-shadow:0 0 5px rgba(255,211,107,.5)}
-.chrome-status.disabled .chr-dot{background:var(--text-faint);opacity:.7}
-.chrome-status-popup{display:none;position:absolute;top:100%;right:0;margin-top:6px;background:var(--bg-raised);border:1px solid var(--border-strong);border-radius:10px;padding:14px;min-width:260px;z-index:65;box-shadow:0 4px 16px rgba(0,0,0,.3);font-size:.78rem}
-.chrome-status-popup.show{display:block}
-.chrome-status-popup h4{margin:0 0 8px;font-size:.82rem;color:var(--text-primary)}
-.chrome-status-popup p{color:var(--text-dim);line-height:1.5;margin:0 0 8px}
-.chrome-status-popup .info-row{display:flex;justify-content:space-between;padding:3px 0;color:var(--text-dim)}
-.chrome-status-popup .info-val{color:var(--text-primary)}
-.chrome-status-popup .connect-link{display:block;margin-top:10px;color:var(--accent);text-decoration:none;font-size:.78rem}
-.chrome-status-popup .connect-link:hover{text-decoration:underline}
 .log-panel,.project-item,.file-item,.task-item,.live-step,.live-subtask,.me-card{
   display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);border-radius:var(--radius);background:rgba(255,255,255,.03);padding:8px 10px
 }
@@ -719,12 +659,10 @@ body[data-mode="mobile"] .ev-attachments{max-width:min(88%,680px)}
   .main{width:100%;min-width:0}
   .toolbar{min-width:0;padding:0 8px;gap:6px}
   .toolbar-brand{display:block;margin-right:0;font-size:15px}
-  .icon-btn.toolbar-expand,.conn-badge,.chrome-status{display:none}
+  .icon-btn.toolbar-expand,.conn-badge{display:none}
   .toolbar-info{flex:1;min-width:0}
   .toolbar-channel-shell{width:auto;max-width:100%;flex:1 1 auto}
   .toolbar-actions{flex-shrink:0}
-  .theme-toggle-btn{min-width:42px;width:42px;padding:0}
-  .theme-toggle-label{display:none}
   .workspace{min-width:0}
   .stream-col{min-width:0}
   .preview-panel,.split-handle,.right-panel{display:none!important}
@@ -1122,10 +1060,6 @@ body[data-mode="mobile"] .ev-attachments{max-width:min(88%,680px)}
 }
 .vizo-toast__close:hover{background:rgba(255,255,255,.06);color:var(--text-primary)}
 .vizo-toast.is-leaving{animation:vizo-toast-exit .16s ease forwards}
-[data-theme="light"] .vizo-toast{
-  background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(245,247,250,.98) 100%);
-  box-shadow:0 18px 42px rgba(15,23,42,.16),0 0 0 1px rgba(15,23,42,.04),0 0 24px var(--toast-glow)
-}
 @keyframes vizo-toast-enter{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes vizo-toast-exit{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
 @media (max-width: 900px){.vizo-toast-host{top:12px;width:calc(100vw - 16px);max-width:none}.vizo-toast{gap:10px;max-width:100%;padding:12px}}
@@ -1210,34 +1144,7 @@ body[data-mode="mobile"] .ev-attachments{max-width:min(88%,680px)}
       </div>
       <div class="toolbar-spacer"></div>
       <div class="conn-badge" id="connectionBadge">未连接</div>
-      <div class="chrome-status waiting" id="chromeStatusBtn" title="浏览器连接" role="button" tabindex="0">
-        <span class="chr-dot"></span>
-        <span id="chromeStatusText">Chrome</span>
-        <div class="chrome-status-popup" id="chromePopup">
-          <div id="chromePopupDisabled" style="display:none">
-            <h4>Chrome MCP 已关闭</h4>
-            <p>浏览器能力已在 MCP 工具中关闭。重新开启后，顶部状态会继续显示连接情况。</p>
-            <a class="connect-link" href="#" id="chromeSettingsLink">打开 MCP 工具页 →</a>
-          </div>
-          <div id="chromePopupDisconnected">
-            <h4>浏览器未连接</h4>
-            <p>连接 Chrome 浏览器，解锁截图、导航、表单填写等 AI 能力。</p>
-            <a class="connect-link" id="chromeConnectLink" href="/vizo/chrome/connect" target="_blank" rel="noopener">打开连接引导页 →</a>
-          </div>
-          <div id="chromePopupConnected" style="display:none">
-            <h4>浏览器已连接</h4>
-            <div class="info-row"><span>浏览器</span><span class="info-val" id="chrBrowser">-</span></div>
-            <div class="info-row"><span>AI 可用能力</span><span class="info-val" id="chrTools">-</span></div>
-            <div class="info-row"><span>连接时长</span><span class="info-val" id="chrUptime">-</span></div>
-            <p>AI 可用能力 = 截图、点击、导航、表单填写等浏览器操作数。</p>
-          </div>
-        </div>
-      </div>
       <div class="toolbar-actions">
-        <button class="icon-btn theme-toggle-btn" type="button" id="themeToggleBtn" data-theme-toggle aria-pressed="false" title="切换到明亮模式">
-          <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
-          <span class="theme-toggle-label" data-theme-label>暗黑模式</span>
-        </button>
         <button class="icon-btn" type="button" id="toggleLiveBtn" title="任务直播">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         </button>

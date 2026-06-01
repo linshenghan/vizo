@@ -1,5 +1,6 @@
 # 运行时数据（通过 named volume 管理）
 .opus/
+.vizo/
 
 # Git 仓库历史（容器内重新 git init）
 .git/

@@ -1,6 +1,6 @@
 # Vizo 秘书进程修复 - 快速启动指南
 
-> 说明：当前 `Vizo` 主线默认入口已切换为 `vizo`，Docker 主路径请优先参考 `docker-compose.vizo.yml`。本文保留的 `opus-secretary`、`/opt/opus-v6` 等命令示例属于历史兼容排障路径，尚未在本轮统一改造范围内移除。
+> 说明：当前 `Vizo` 主线默认入口已切换为 `vizo`，Docker 主路径请优先参考 `docker-compose.yml`。本文保留的 `opus-secretary`、`/opt/opus-v6` 等命令示例属于历史兼容排障路径，尚未在本轮统一改造范围内移除。
 
 ## 🚀 立即启动（3步）
 
@@ -87,16 +87,13 @@ self._opus_task.add_done_callback(handle_task_exception)
 
 ## 🧪 快速测试
 
-### 方式 A：命令行测试脚本
+### 方式 A：本地服务健康检查
 ```bash
-cd /opt/opus-v6
-python3 test_secretary.py
+cd /opt/vizo-next
+python3 scripts/restart_confirm_server.py --wait-seconds 8
 
 # 输出示例：
-# [测试 1] 简单问答
-#   ✅ 秘书已接收并开始处理
-# [测试 2] 状态查询
-#   ✅ 秘书已处理状态查询
+# confirm_server healthy on http://127.0.0.1:9390/health
 ```
 
 ### 方式 B：企微实际测试

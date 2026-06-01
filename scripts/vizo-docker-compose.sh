@@ -20,4 +20,4 @@ if [[ $# -eq 0 ]]; then
   set -- up -d
 fi
 
-exec docker compose -f "${ROOT_DIR}/docker-compose.vizo.yml" "$@"
+exec docker compose -f "${ROOT_DIR}/docker-compose.yml" "$@"

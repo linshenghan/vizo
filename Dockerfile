@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+LABEL org.opencontainers.image.title="Vizo" \
+      org.opencontainers.image.description="Vizo single-user Docker runtime"
+
 # 系统依赖：git（worktree）、curl（健康检查）、gnupg+ca-certificates（NodeSource 签名验证）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -19,6 +22,9 @@ RUN npm install -g @anthropic-ai/claude-code @openai/codex @playwright/mcp \
     && rm -rf /var/lib/apt/lists/*
 
 ENV VIZO_RUNTIME_NPM_PREFIX=/usr/local
+ENV HOME=/home/vizo
+ENV OPUS_BRAND_EN=Vizo
+ENV OPUS_BRAND_ZH=维造
 
 # 工作目录
 WORKDIR /app
@@ -74,7 +80,7 @@ RUN git config --global user.email "vizo@container" \
     && git commit -m "Docker initial commit" --allow-empty
 
 # 确保运行时目录存在（named volume 挂载前需要目标路径）
-RUN mkdir -p /app/.vizo /app/logs
+RUN mkdir -p /app/.vizo /app/logs /home/vizo
 
 # 暴露 confirm_server 端口
 EXPOSE 9390

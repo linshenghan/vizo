@@ -7,22 +7,28 @@ README.md
 USER-MANUAL.md
 requirements.txt
 .env.example
+config.json.example
 .mcp.json.example
 .dockerignore
 .gitignore
 Dockerfile
-Dockerfile.release
-Dockerfile.vizo
 docker-compose.yml
-docker-compose.vizo.yml
-build.sh
-git_helper.sh
-RESTART_WEB_CONSOLE.sh
 vizo
 
-*.py
+agent_hub.py
+agent_router.py
+agent_runner.py
+opus.py
+orchestrator.py
+secretary.py
+state_manager.py
+stream_renderer.py
+user_interface.py
+vizo.py
+wecom_callback.py
 lib/*.py
 lib/runtime/*.py
+lib/runtime/sessions/*.py
 lib/runtime/subagents/*.py
 lib/static/vendor/**
 lib/static/fonts/google/**
@@ -58,7 +64,10 @@ PUBLIC_SYNC_MANIFEST.txt
 scripts/sync_public_repo.py
 
 !.env
-!.env.*
+!.env.local
+!.env.development
+!.env.production
+!.env.test
 !.git/**
 !.mcp.json
 !config.json

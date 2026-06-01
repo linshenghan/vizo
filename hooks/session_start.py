@@ -174,7 +174,7 @@ def detect_project_from_cwd(cwd: str) -> tuple:
 
 
 # 行为规则（精简版 v5.1）
-# 详细流程由各 hook 按需注入：prompt_enhancer / auto_serena / micro_reminder 等
+# 详细流程由当前注册 hook 按需注入。
 OPUS_BEHAVIOR_RULES = """
 ## 维造 / Vizo 智能协作系统 - 核心规则
 
@@ -195,7 +195,7 @@ OPUS_BEHAVIOR_RULES = """
 | 快速问答 | `vizo --chat "问题"` |
 | 查看任务历史 | `vizo --history` |
 | 查看花费 | `vizo --cost` |
-| Git 提交 | `./git_helper.sh save "描述"` |
+| Git 提交 | `git status && git add -A && git commit -m "描述"` |
 | Secretary 状态 | `systemctl --user status vizo-secretary` |
 
 ### 知识库位置

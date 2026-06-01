@@ -11,7 +11,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-DEFAULT_CONFIG_PATH = str(Path(__file__).resolve().parent / "config.json")
+DEFAULT_CONFIG_PATH = str(Path(__file__).resolve().parents[1] / "config.json")
 DEFAULT_CALLBACK_PORT = 8080
 DEFAULT_TIMEOUT = 5
 
