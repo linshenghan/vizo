@@ -1,0 +1,113 @@
+{
+  "id": "contract_service",
+  "name": "合同服务",
+  "icon": "📜",
+  "description": "合同撰写、审查、风险识别、条款优化。处理劳动合同、采购合同、保密协议(NDA)、服务协议(SLA)等各类法律文书。",
+  "version": "1.0",
+  "author": "system",
+
+  "input": {
+    "accept": [".pdf", ".docx", ".txt", ".md"],
+    "description": "请提供待处理的合同文件",
+    "optional": true
+  },
+
+  "workflows": {
+    "draft_and_review": {
+      "name": "合同撰写 + 审查",
+      "description": "从需求到成稿的全流程，包括需求收集、起草、审查、修订。适用于用户需要从零开始撰写一份新合同的场景。",
+      "stages": [
+        {
+          "stage": "drafting",
+          "name": "合同撰写",
+          "steps": [
+            {
+              "step": "requirement_gathering",
+              "role": "contract_consultant",
+              "output": "01-requirements.md",
+              "confirm": true,
+              "description": "收集合同需求和关键条款"
+            },
+            {
+              "step": "draft",
+              "role": "contract_drafter",
+              "output": "02-draft-contract.md",
+              "confirm": true,
+              "description": "起草合同文本"
+            }
+          ]
+        },
+        {
+          "stage": "review",
+          "name": "合同审查",
+          "steps": [
+            {
+              "step": "clause_analysis",
+              "role": "legal_analyst",
+              "output": "03-clause-analysis.md",
+              "confirm": false,
+              "description": "逐条分析合同条款"
+            },
+            {
+              "step": "risk_assessment",
+              "role": "risk_assessor",
+              "output": "04-risk-report.md",
+              "confirm": true,
+              "description": "识别风险并给出修改建议"
+            },
+            {
+              "step": "revision",
+              "role": "contract_drafter",
+              "output": "05-final-contract.md",
+              "confirm": false,
+              "description": "根据审查意见修订合同"
+            }
+          ]
+        }
+      ]
+    },
+    "review_only": {
+      "name": "仅审查已有合同",
+      "description": "对已有合同文本进行逐条分析和风险评估。适用于用户已有合同文件、需要检查风险点的场景。",
+      "steps": [
+        {
+          "step": "clause_analysis",
+          "role": "legal_analyst",
+          "output": "01-clause-analysis.md",
+          "confirm": false,
+          "description": "逐条分析合同条款"
+        },
+        {
+          "step": "risk_assessment",
+          "role": "risk_assessor",
+          "output": "02-risk-report.md",
+          "confirm": true,
+          "description": "识别风险并给出修改建议"
+        }
+      ]
+    }
+  },
+
+  "roles": {
+    "contract_consultant": {
+      "template": "roles/contract_consultant.md",
+      "model": "sonnet",
+      "tools": ["Read", "WebSearch"]
+    },
+    "contract_drafter": {
+      "template": "roles/contract_drafter.md",
+      "model": "sonnet",
+      "tools": ["Read", "Write"]
+    },
+    "legal_analyst": {
+      "template": "roles/legal_analyst.md",
+      "model": "sonnet",
+      "tools": ["Read", "Write", "WebSearch", "WebFetch"]
+    },
+    "risk_assessor": {
+      "template": "roles/risk_assessor.md",
+      "model": "sonnet",
+      "tools": ["Read", "Write"]
+    }
+  }
+}

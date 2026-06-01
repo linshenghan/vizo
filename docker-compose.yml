@@ -1,0 +1,27 @@
+services:
+  vizo:
+    build: .
+    ports:
+      - "9390:9390"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - WEB_CONSOLE_TOKEN=${WEB_CONSOLE_TOKEN:-}
+      - WECOM_ENABLED=${WECOM_ENABLED:-false}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - vizo_data:/app/.vizo
+      - ./.mcp.json:/app/.mcp.json
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  vizo_data:
+  redis_data:

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vizo __WORKBENCH_TITLE__</title>
+<script>
+/* 必须在 CSS 前执行，避免保存亮色偏好后刷新时先闪暗色。 */
+(function(){
+  try {
+    var t = localStorage.getItem('opus_theme');
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  } catch(e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+</script>
+<link rel="stylesheet" href="/vizo/static/vendor/google-fonts.css">
+<style>
+:root{
+  --bg-base:#06111d;--bg-raised:#0c1a2a;--bg-surface:#112236;--bg-overlay:#152a42;
+  --text-primary:#e6eef8;--text-soft:#adc0d9;--text-dim:#7185a0;
+  --accent:#7be0ff;--accent-dim:rgba(123,224,255,.08);
+  --border:rgba(255,255,255,.06);--border-strong:rgba(255,255,255,.10);
+  --shell-gradient:linear-gradient(180deg,#081322 0%,#06111d 100%);
+  --topbar-bg:rgba(12,26,42,.92);--loading-bg:rgba(6,17,29,.76);--frame-shadow:0 12px 32px rgba(0,0,0,.28);
+  --radius-sm:6px;--radius-md:8px;--radius-lg:12px;
+  --font-size-xs:11px;--font-size-sm:12px;--font-size-md:13px;--font-size-lg:14px;
+  --sans:Inter,"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+[data-theme="light"]{
+  --bg-base:#f6f8fa;--bg-raised:#ffffff;--bg-surface:#f0f3f6;--bg-overlay:#eaeef2;
+  --text-primary:#1f2328;--text-soft:#3d444d;--text-dim:#59636e;
+  --accent:#0969da;--accent-dim:rgba(9,105,218,.09);
+  --border:rgba(31,35,40,.10);--border-strong:rgba(31,35,40,.16);
+  --shell-gradient:linear-gradient(180deg,#ffffff 0%,#f6f8fa 100%);
+  --topbar-bg:rgba(255,255,255,.92);--loading-bg:rgba(246,248,250,.76);--frame-shadow:0 12px 28px rgba(31,35,40,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-base);color:var(--text-primary);font-family:var(--sans);font-size:var(--font-size-md);line-height:1.5}
+button{font:inherit}
+.workbench-shell{display:flex;flex-direction:column;width:100%;height:100vh;background:
+  radial-gradient(circle at top left,rgba(123,224,255,.04),transparent 24%),
+  var(--shell-gradient)}
+.workbench-topbar{
+  height:44px;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--border);
+  background:var(--topbar-bg);backdrop-filter:blur(10px);flex-shrink:0
+}
+.workbench-back{
+  appearance:none;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:transparent;color:var(--text-soft);
+  padding:6px 10px;cursor:pointer;transition:all .18s ease;font-size:var(--font-size-sm)
+}
+.workbench-back:hover{background:var(--bg-overlay);color:var(--text-primary);border-color:rgba(123,224,255,.22)}
+.workbench-main{position:relative;flex:1;min-height:0;padding:12px}
+.workbench-frame{
+  width:100%;height:100%;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--bg-raised);
+  box-shadow:var(--frame-shadow)
+}
+.workbench-loading{
+  position:absolute;inset:12px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-lg);
+  background:var(--loading-bg);color:var(--text-dim);font-size:var(--font-size-md);pointer-events:none;transition:opacity .18s ease
+}
+.workbench-loading[hidden]{opacity:0}
+</style>
+</head>
+<body
+  data-kind="__WORKBENCH_KIND__"
+  data-title="__WORKBENCH_TITLE__"
+  data-target="__WORKBENCH_TARGET__"
+  data-return="__WORKBENCH_RETURN__"
+>
+  <div class="workbench-shell">
+    <header class="workbench-topbar">
+      <button class="workbench-back" type="button" id="workbenchBackBtn">← 回到主页</button>
+    </header>
+    <main class="workbench-main">
+      <iframe class="workbench-frame" id="workbenchFrame" title="__WORKBENCH_TITLE__" loading="eager"></iframe>
+      <div class="workbench-loading" id="workbenchLoading">正在加载 __WORKBENCH_TITLE__ 页面...</div>
+    </main>
+  </div>
+  <script>
+__WORKBENCH_RUNTIME__
+  </script>
+</body>
+</html>

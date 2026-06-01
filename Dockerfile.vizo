@@ -1,0 +1,70 @@
+FROM python:3.11-slim
+
+LABEL org.opencontainers.image.title="Vizo" \
+      org.opencontainers.image.description="Vizo single-user Docker runtime"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g @anthropic-ai/claude-code @openai/codex @playwright/mcp \
+    && node "$(npm root -g)/@playwright/mcp/node_modules/playwright/cli.js" install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV HOME=/home/vizo
+ENV OPUS_BRAND_EN=Vizo
+ENV OPUS_BRAND_ZH=维造
+ENV VIZO_RUNTIME_NPM_PREFIX=/usr/local
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN mkdir -p /app/.vizo /app/logs /home/vizo
+
+RUN cat > /app/.mcp.json <<'MCP_EOF'
+{
+  "mcpServers": {
+    "serena": {
+      "command": "serena",
+      "args": ["start-mcp-server", "--project-from-cwd"]
+    },
+    "mcp-chrome": {
+      "command": "python3",
+      "args": ["lib/chrome_mcp_stdio.py"]
+    },
+    "vizo-router": {
+      "command": "python3",
+      "args": ["lib/vizo_router_mcp_stdio.py"]
+    },
+    "jina": {
+      "command": "npx",
+      "args": ["-y", "jina-mcp-tools"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--browser",
+        "chromium",
+        "--no-sandbox",
+        "--isolated"
+      ]
+    }
+  }
+}
+MCP_EOF
+
+EXPOSE 9380
+
+CMD ["python3", "/app/secretary.py"]

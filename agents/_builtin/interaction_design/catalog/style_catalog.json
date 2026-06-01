@@ -1,0 +1,296 @@
+{
+  "version": 1,
+  "source": "ui-ux-pro-max-inspired",
+  "systems": [
+    {
+      "system_id": "calm_console",
+      "label": "稳健数据控制台",
+      "summary": "适合后台、工作台和监控类产品，强调清晰层级、收敛圆角和稳定信息密度。",
+      "rationale": "这套方案适合需要长期高频使用的控制台，能避免页面过于花哨，便于持续扩展。",
+      "fit_tags": ["console", "enterprise", "dashboard", "data", "ops"],
+      "priority": 10,
+      "keywords": ["稳健", "控制台", "专业", "清晰"],
+      "color_direction": "冷静蓝绿主色 + 低饱和中性色表面",
+      "typography_direction": "标题克制上提，正文以 14px 到 16px 的稳定阅读基线为主",
+      "component_direction": "卡片、表格、筛选和状态标签要清楚，但不过度厚重",
+      "motion_direction": "轻量反馈、低位移、强调状态切换而非炫技",
+      "design_spec": {
+        "density": "默认中高信息密度，避免超大留白把后台做成海报。",
+        "layout": "优先使用顶部概览 + 主内容栅格 + 侧边辅助信息的稳健结构。",
+        "type_scale": "正文以 14px 为基线，模块标题 18px 到 22px，页面标题控制在 26px 到 30px。",
+        "radius_policy": "圆角收敛，输入框和按钮 10px 到 12px，卡片 14px 到 16px。",
+        "component_rules": "优先统一按钮高度、筛选条密度、表格行距和卡片阴影层级。",
+        "interaction_rules": "反馈要快，hover 与 active 变化明确，但不要用夸张动画抢信息层级。"
+      },
+      "ui_tokens": {
+        "font_family": "\"IBM Plex Sans\", \"PingFang SC\", sans-serif",
+        "font_size_base": "14px",
+        "font_size_title": "28px",
+        "radius_sm": "10px",
+        "radius_md": "12px",
+        "radius_lg": "16px",
+        "primary": "#1F6FEB",
+        "surface": "#F6F8FC",
+        "border": "#D8E0EE",
+        "shadow": "0 12px 28px rgba(15, 23, 42, 0.08)"
+      },
+      "resources": {
+        "fonts": [
+          {
+            "family": "IBM Plex Sans",
+            "fallbacks": ["PingFang SC", "sans-serif"],
+            "source": "google_fonts",
+            "usage": "primary-ui"
+          }
+        ],
+        "icons": [
+          {
+            "name": "Material Symbols Rounded",
+            "source": "material_symbols",
+            "usage": "ui-icons",
+            "style": "rounded"
+          }
+        ],
+        "motion": {
+          "type": "css",
+          "source": "css",
+          "duration": "120ms-180ms",
+          "easing": "cubic-bezier(0.2, 0, 0, 1)",
+          "notes": "轻量状态反馈与低位移切换。"
+        }
+      }
+    },
+    {
+      "system_id": "warm_service",
+      "label": "亲和服务应用",
+      "summary": "适合面向普通用户的服务型产品，强调亲和感、轻盈表面和清晰行动按钮。",
+      "rationale": "当产品需要降低理解门槛、快速建立信任时，这套风格能兼顾柔和感和可执行性。",
+      "fit_tags": ["consumer", "service", "mobile", "app", "growth"],
+      "priority": 9,
+      "keywords": ["亲和", "服务", "轻盈", "温和"],
+      "color_direction": "暖中性色表面 + 单一明快主色点亮关键操作",
+      "typography_direction": "正文舒展但不过胖，标题有亲和感，不做过强品牌宣言",
+      "component_direction": "表单、列表、卡片和 CTA 要圆润但不能过度胶囊化",
+      "motion_direction": "重视进入与确认反馈，动效保持轻快节奏",
+      "design_spec": {
+        "density": "默认中密度，保留呼吸感，但不使用夸张留白。",
+        "layout": "以单列卡片和模块化区块组织内容，移动端和 Web 统一风格语义。",
+        "type_scale": "正文 15px 为主，模块标题 20px 到 24px，主标题 30px 左右即可。",
+        "radius_policy": "按钮和输入框 12px，卡片 18px 左右，避免超大药丸圆角。",
+        "component_rules": "主次按钮层级清晰，列表卡片尽量减少不必要装饰线。",
+        "interaction_rules": "确认态和成功态更重要，减少复杂悬浮动画。"
+      },
+      "ui_tokens": {
+        "font_family": "\"Plus Jakarta Sans\", \"PingFang SC\", sans-serif",
+        "font_size_base": "15px",
+        "font_size_title": "30px",
+        "radius_sm": "12px",
+        "radius_md": "14px",
+        "radius_lg": "18px",
+        "primary": "#F26A4B",
+        "surface": "#FFF9F5",
+        "border": "#F0DDD6",
+        "shadow": "0 14px 30px rgba(99, 58, 32, 0.08)"
+      },
+      "resources": {
+        "fonts": [
+          {
+            "family": "Plus Jakarta Sans",
+            "fallbacks": ["PingFang SC", "sans-serif"],
+            "source": "google_fonts",
+            "usage": "primary-ui"
+          }
+        ],
+        "icons": [
+          {
+            "name": "Material Symbols Rounded",
+            "source": "material_symbols",
+            "usage": "ui-icons",
+            "style": "rounded"
+          }
+        ],
+        "motion": {
+          "type": "css",
+          "source": "css",
+          "duration": "140ms-220ms",
+          "easing": "cubic-bezier(0.2, 0, 0, 1)",
+          "notes": "轻快进入、确认反馈和成功态过渡。"
+        }
+      }
+    },
+    {
+      "system_id": "bold_ai_workspace",
+      "label": "大胆 AI 工作空间",
+      "summary": "适合 AI、创作工具和实验性工作台，强调鲜明对比、强主视觉和节奏化布局。",
+      "rationale": "当产品需要体现创新感与能力感时，这套方案更容易让用户感知到“工具很强”。",
+      "fit_tags": ["ai", "workspace", "bold", "creative", "tool"],
+      "priority": 8,
+      "keywords": ["AI", "大胆", "创新", "能力感"],
+      "color_direction": "高对比深浅表面 + 电性强调色，但保留可读性",
+      "typography_direction": "标题更有冲击力，正文仍要维持工程化可读性",
+      "component_direction": "模块分区更鲜明，重点区块允许使用更强视觉标记",
+      "motion_direction": "允许少量节奏型转场，但不影响操作效率",
+      "design_spec": {
+        "density": "核心首屏可以略松，工具区和表单区仍保持可用密度。",
+        "layout": "允许 hero 区更强势，但工作区仍需遵守稳定网格。",
+        "type_scale": "正文 14px 到 15px，标题可提升到 32px，但不再向上失控。",
+        "radius_policy": "统一在 12px 到 16px 区间，不使用夸张泡泡圆角。",
+        "component_rules": "重点卡片、AI 输出区、操作栏要有明确层级，但风格语言统一。",
+        "interaction_rules": "动效只服务于状态变化与注意力引导，避免大面积炫技。"
+      },
+      "ui_tokens": {
+        "font_family": "\"Space Grotesk\", \"PingFang SC\", sans-serif",
+        "font_size_base": "14px",
+        "font_size_title": "32px",
+        "radius_sm": "12px",
+        "radius_md": "14px",
+        "radius_lg": "16px",
+        "primary": "#35C2FF",
+        "surface": "#0F172A",
+        "border": "#24324D",
+        "shadow": "0 16px 36px rgba(8, 15, 32, 0.36)"
+      },
+      "resources": {
+        "fonts": [
+          {
+            "family": "Space Grotesk",
+            "fallbacks": ["PingFang SC", "sans-serif"],
+            "source": "google_fonts",
+            "usage": "primary-ui"
+          }
+        ],
+        "icons": [
+          {
+            "name": "Material Symbols Rounded",
+            "source": "material_symbols",
+            "usage": "ui-icons",
+            "style": "rounded"
+          }
+        ],
+        "motion": {
+          "type": "css",
+          "source": "css",
+          "duration": "140ms-240ms",
+          "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+          "notes": "少量节奏型转场，用于状态变化与注意力引导。"
+        }
+      }
+    },
+    {
+      "system_id": "editorial_story",
+      "label": "编辑感内容产品",
+      "summary": "适合内容展示、品牌叙事和资讯型产品，强调版式节奏和精致留白。",
+      "rationale": "当产品需要突出内容阅读体验、品牌气质或故事表达时，这套方案更合适。",
+      "fit_tags": ["content", "editorial", "brand", "story", "media"],
+      "priority": 7,
+      "keywords": ["内容", "编辑感", "品牌", "叙事"],
+      "color_direction": "高级中性色为主，少量品牌色做视觉锚点",
+      "typography_direction": "标题更重视韵律和层次，正文阅读体验优先",
+      "component_direction": "卡片与区块边界更弱，强调版式与内容节奏",
+      "motion_direction": "轻缓进入与章节切换，减少强烈反馈噪音",
+      "design_spec": {
+        "density": "阅读区允许更舒展，但功能区仍要保持清晰操作密度。",
+        "layout": "优先考虑内容栅格和段落节奏，避免控件打断阅读体验。",
+        "type_scale": "正文 16px 左右，标题分层明显，但不要无限放大 hero 字号。",
+        "radius_policy": "圆角更低调，重点依靠排版和留白而非大圆角制造风格。",
+        "component_rules": "卡片边框与按钮存在感较低，避免后台式工具感。",
+        "interaction_rules": "动效应陪衬内容节奏，不要频繁闪动。"
+      },
+      "ui_tokens": {
+        "font_family": "\"DM Serif Display\", \"Noto Serif SC\", serif",
+        "font_size_base": "16px",
+        "font_size_title": "34px",
+        "radius_sm": "8px",
+        "radius_md": "10px",
+        "radius_lg": "14px",
+        "primary": "#8C5C3F",
+        "surface": "#FAF7F2",
+        "border": "#E5DDD1",
+        "shadow": "0 10px 24px rgba(60, 37, 20, 0.08)"
+      },
+      "resources": {
+        "fonts": [
+          {
+            "family": "DM Serif Display",
+            "fallbacks": ["Noto Serif SC", "serif"],
+            "source": "google_fonts",
+            "usage": "display-and-editorial"
+          }
+        ],
+        "icons": [
+          {
+            "name": "Material Symbols Rounded",
+            "source": "material_symbols",
+            "usage": "ui-icons",
+            "style": "rounded"
+          }
+        ],
+        "motion": {
+          "type": "css",
+          "source": "css",
+          "duration": "180ms-260ms",
+          "easing": "cubic-bezier(0.2, 0, 0, 1)",
+          "notes": "轻缓进入与章节切换，动效只陪衬内容节奏。"
+        }
+      }
+    },
+    {
+      "system_id": "premium_minimal",
+      "label": "克制高级极简",
+      "summary": "适合高价值工具、专业品牌站和需要信赖感的产品，强调克制比例与材质感。",
+      "rationale": "当产品希望看起来专业、整洁、贵而不浮夸，这套方案更容易长期保持稳定审美。",
+      "fit_tags": ["premium", "minimal", "tool", "brand", "saas"],
+      "priority": 8,
+      "keywords": ["极简", "高级", "克制", "专业"],
+      "color_direction": "低彩表面 + 单点高纯度主色，依赖层级和材质区分信息",
+      "typography_direction": "字重与字距更克制，靠比例而非大小制造高级感",
+      "component_direction": "边界细腻，按钮和卡片更像精修过的工业部件",
+      "motion_direction": "极简但不僵硬，微小过渡保证顺滑",
+      "design_spec": {
+        "density": "整体中密度偏松，但每个区块的节奏必须严格控制。",
+        "layout": "优先使用大面板 + 精准对齐，不堆砌浮层与色块。",
+        "type_scale": "正文 14px 到 15px，标题 26px 到 30px，保持比例克制。",
+        "radius_policy": "圆角 8px 到 14px，强调精密感而非可爱感。",
+        "component_rules": "表面层级以阴影和边框微差区分，按钮高度和字重保持统一。",
+        "interaction_rules": "动画应短促、顺滑、低噪音。"
+      },
+      "ui_tokens": {
+        "font_family": "\"Sora\", \"PingFang SC\", sans-serif",
+        "font_size_base": "14px",
+        "font_size_title": "28px",
+        "radius_sm": "8px",
+        "radius_md": "12px",
+        "radius_lg": "14px",
+        "primary": "#111827",
+        "surface": "#F7F7F5",
+        "border": "#D9D9D2",
+        "shadow": "0 12px 28px rgba(17, 24, 39, 0.07)"
+      },
+      "resources": {
+        "fonts": [
+          {
+            "family": "Sora",
+            "fallbacks": ["PingFang SC", "sans-serif"],
+            "source": "google_fonts",
+            "usage": "primary-ui"
+          }
+        ],
+        "icons": [
+          {
+            "name": "Material Symbols Rounded",
+            "source": "material_symbols",
+            "usage": "ui-icons",
+            "style": "rounded"
+          }
+        ],
+        "motion": {
+          "type": "css",
+          "source": "css",
+          "duration": "120ms-180ms",
+          "easing": "cubic-bezier(0.2, 0, 0, 1)",
+          "notes": "短促、顺滑、低噪音的 CSS 过渡。"
+        }
+      }
+    }
+  ]
+}

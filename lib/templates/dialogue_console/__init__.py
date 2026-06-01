@@ -1,0 +1,1 @@
+"""Dialogue Console runtime resources."""

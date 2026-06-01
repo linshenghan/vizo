@@ -1,0 +1,36 @@
+# 运行时数据（通过 named volume 管理）
+.opus/
+
+# Git 仓库历史（容器内重新 git init）
+.git/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 测试文件（生产镜像不需要）
+tests/
+
+# 开发/测试临时目录
+.test-opus/
+
+# 运行时日志（容器内重新创建）
+logs/
+
+# IDE 和工具配置
+.claude/
+.claude-agent/
+.serena/
+.mcp.json
+
+# 敏感文件（防止泄入镜像）
+*.env
+.env*
+
+# 非必要文档
+docs/
+
+# OS 生成文件
+*:Zone.Identifier

@@ -1,0 +1,25 @@
+# Web 框架
+aiohttp>=3.9.0
+aiohttp-cors>=0.7.0
+
+# 数据存储
+redis>=5.0.0
+
+# 终端渲染
+rich>=13.0.0
+
+# HTTP 客户端
+requests>=2.31.0
+httpx>=0.27.0
+
+# 密码哈希
+bcrypt>=4.0.0
+
+# 加解密（企微消息）
+pycryptodome>=3.19.0
+
+# HTML 处理
+html2text>=2024.2.0
+
+# 进程管理
+psutil>=5.9.0

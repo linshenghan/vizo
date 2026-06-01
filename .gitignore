@@ -1,0 +1,42 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.vizo/
+.opus/
+logs/
+.test-opus/
+.agents/
+.claude/
+.claude-agent/
+.codex/
+.mcp.json
+lib/confirm_server.pid
+lib/sessions/
+Opus V6 使用教程_files/
+*:Zone.Identifier
+.vizo/env
+.opus/env
+.env
+.env.*
+config.json
+lib/config_v3.json
+projects/lalala/
+projects/test/
+projects/test-hub-round2/
+
+# Local Codex/Playwright/Serena runtime artifacts produced by validation runs.
+.codex/
+.playwright-mcp/
+.playwright-site/
+.serena/
+.serena-upgrade-backups/
+.serena-venv/
+.serena-venv312/
+.serena-codex-home/language_servers/static/EclipseJDTLS/workspaces/
+.serena-codex-home/language_servers/static/TypeScriptLanguageServer/
+.serena-codex-home/memories/
+
+# User project checkouts live under this directory and should not be part of
+# the Vizo application repository.
+projects/

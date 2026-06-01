@@ -1,0 +1,127 @@
+{
+  "id": "interaction_design",
+  "name": "交互设计师",
+  "icon": "🎨",
+  "description": "面向小程序、App、网站和页面类需求，先做设计分析，再推荐 3 套视觉系统，并在用户选择后生成可预览的交互 demo。",
+  "version": "1.0",
+  "author": "system",
+  "workflows": {
+    "design_demo": {
+      "name": "需求分析 + 风格推荐 + 交互 Demo",
+      "description": "先分析产品需求和核心场景，再推荐 3 套候选风格，待用户选择后生成一个可预览的中文交互 demo。",
+      "stages": [
+        {
+          "stage": "analysis",
+          "name": "设计分析",
+          "steps": [
+            {
+              "step": "design_analysis",
+              "role": "design_analyst",
+              "output": "01-design-analysis.md",
+              "confirm": false,
+              "description": "分析产品目标、核心用户、关键场景和 demo 范围",
+              "prompt_hint": "聚焦本次 demo 要覆盖的页面和交互，不要把分析扩成完整 PRD。"
+            }
+          ]
+        },
+        {
+          "stage": "style_selection",
+          "name": "视觉系统候选",
+          "steps": [
+            {
+              "step": "style_candidates",
+              "role": "interaction_designer",
+              "output": "02-style-candidates.md",
+              "confirm": true,
+              "button_set": "doc_review",
+              "description": "基于 style catalog 推荐 3 套候选风格并说明推荐理由",
+              "prompt_hint": "必须严格使用输入里的 style_catalog；固定给出 A/B/C 三套方案，并明确默认推荐。",
+              "confirm_message": "🎨 视觉系统候选已生成。\n   如果你接受默认推荐，直接确认继续即可。\n   如果你想指定某套方案或微调方向，请使用“补充修改意见”回复，例如“选 B 方案，按钮再克制一点”。",
+              "extra_inputs": [
+                {
+                  "name": "style_catalog",
+                  "path": "catalog/style_catalog.json"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "stage": "selection_finalize",
+          "name": "方案固化",
+          "steps": [
+            {
+              "step": "selected_system",
+              "role": "design_system_curator",
+              "output": "03-selected-system.json",
+              "confirm": false,
+              "description": "根据候选文档和用户反馈固化本次 demo 使用的视觉系统",
+              "prompt_hint": "优先尊重用户在上一步确认阶段给出的 A/B/C 选择或微调意见；如果没有明确选择，则采用候选文档里的默认推荐。输出结构化 JSON，供后续 demo 生成和显式采纳复用。"
+            }
+          ]
+        },
+        {
+          "stage": "demo",
+          "name": "交互 Demo",
+          "steps": [
+            {
+              "step": "interaction_demo",
+              "role": "prototype_designer",
+              "output": "04-interaction-demo.html",
+              "confirm": false,
+              "description": "基于已选视觉系统生成可预览的中文交互 demo",
+              "prompt_hint": "输出完整单文件 HTML，覆盖核心使用场景和关键交互，不要写入项目长期默认设计记忆。"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "roles": {
+    "design_analyst": {
+      "template": "roles/design_analyst.md",
+      "model": "sonnet",
+      "memory_scope": "interaction_designer",
+      "tools": [
+        "Read",
+        "Write",
+        "Grep",
+        "mcp__serena"
+      ]
+    },
+    "interaction_designer": {
+      "template": "roles/interaction_designer.md",
+      "model": "sonnet",
+      "memory_scope": "interaction_designer",
+      "tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep",
+        "mcp__serena"
+      ]
+    },
+    "design_system_curator": {
+      "template": "roles/design_system_curator.md",
+      "model": "sonnet",
+      "memory_scope": "interaction_designer",
+      "tools": [
+        "Read",
+        "Write",
+        "Grep",
+        "mcp__serena"
+      ]
+    },
+    "prototype_designer": {
+      "template": "roles/prototype_designer.md",
+      "model": "sonnet",
+      "memory_scope": "interaction_designer",
+      "tools": [
+        "Read",
+        "Write",
+        "Grep",
+        "mcp__serena"
+      ]
+    }
+  }
+}
