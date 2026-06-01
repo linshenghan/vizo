@@ -2,7 +2,7 @@
 
 ## 概述
 
-文档服务器是 OPUS V6 的关键功能，用于提供测试过程中生成的 JSON 文档的在线访问，支持企业微信中的可点击链接。
+文档服务器是 OPUS V6 的关键功能，用于提供测试过程中生成的 JSON 文档的在线访问。
 
 ## 功能特性
 
@@ -12,7 +12,7 @@
 
 ✅ **完整的 CORS 支持**
 - 支持跨域请求
-- 允许企业微信中的链接直接打开
+- 允许浏览器和控制台预览链接直接打开
 
 ✅ **安全防护**
 - 防止目录遍历攻击
@@ -134,11 +134,11 @@ curl https://opus.bingbing.asia/docs/
 curl https://opus.bingbing.asia/docs/s01-kanban-1770979338/00-requirement-analysis.json
 ```
 
-## 企业微信集成
+## 控制台集成
 
 ### 消息格式
 
-在企业微信消息中包含文档链接：
+在控制台或确认页面中展示文档链接：
 
 ```
 ✅ 需求分析已完成
@@ -162,7 +162,7 @@ https://opus.bingbing.asia/docs/s01-kanban-1770979338/00-requirement-analysis.js
 # 生成文档链接
 doc_link = f"https://opus.bingbing.asia/docs/{self.task_id}/00-requirement-analysis.json"
 
-# 构建企微消息
+# 构建控制台摘要
 message = f"""
 ✅ 步骤1: 需求分析完成
 
@@ -172,8 +172,8 @@ message = f"""
 🔗 完整文档: {doc_link}
 """
 
-# 发送消息
-self.send_wecom_message(message)
+# 展示摘要
+self.show_summary(message)
 ```
 
 ## 故障排查

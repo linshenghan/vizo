@@ -318,14 +318,6 @@ class Orchestrator:
     async def run(self, user_request: str, workflow: str = "auto"):
         """主入口：分类→对应模式→需求分析→PRD→工作流"""
         await self._startup_cleanup()
-        # 0. 企微模式下检查服务可用性
-        if self.ui.mode == "wecom":
-            status = await self.ui.check_wecom_services()
-            if not status["callback"]:
-                self.ui.print_warning("企微 Callback Server 未运行，远程回复将不可用")
-                self.ui.print_info("启动方式: systemctl --user start wecom-callback")
-            if not status["redis"]:
-                self.ui.print_warning("Redis 不可用，企微消息收发将降级到终端")
 
         # 1. 分类
         task_mode = self._classify_request(user_request)
@@ -1177,9 +1169,8 @@ class Orchestrator:
         # 安全网：自动提交未提交的代码变更
         commit_hash = self._auto_commit_changes(task)
 
-        # 更新 progress.json + 企微卡片推送
+        # 更新 progress.json
         self._update_progress(task, "complete")
-        await self._push_step_card(task, "complete")
 
         # 用户手册自动更新（有行为变更时触发）
         behavior_changes_file = task.dir / "behavior_changes.json"
@@ -3560,29 +3551,6 @@ class Orchestrator:
         for batch_idx, batch in enumerate(batches):
             batch_num = batch_idx + 1
 
-            # 批次间确认检查点（仅企微模式下触发，终端模式自治）
-            if batch_idx > 0 and total_batches > 2 and self.ui.mode == "wecom":
-                batch_summary = self._generate_batch_summary(
-                    batches, batch_idx, sub_tasks,
-                )
-                _ctx = self._build_confirm_context(task, button_set="doc_review")
-                self.state.set_pending_confirm(task, "", "confirm_with_feedback",
-                                               f"阶段 {batch_num}/{total_batches} 即将开始",
-                                               button_set=_ctx.button_set)
-                self._update_progress(task, "waiting_confirm",
-                                      pending_confirm=task.pending_confirm)
-                action = await self.ui.confirm_with_feedback(
-                    f"阶段 {batch_num}/{total_batches} 即将开始\n\n{batch_summary}",
-                    context=_ctx,
-                )
-                self.state.clear_pending_confirm(task)
-                self._update_progress(task, "confirm_resolved")
-                if action == "cancel":
-                    raise WorkflowError(f"用户在阶段 {batch_num} 取消")
-                if action == "feedback":
-                    feedback = await self.ui.get_user_feedback()
-                    logger.info(f"用户对阶段 {batch_num} 的意见: {feedback}")
-
             self.ui.print_info(f"执行第 {batch_num}/{total_batches} 批（{len(batch)} 个子任务）")
 
             # 过滤出本批次可执行的子任务（跳过已完成和依赖失败的）
@@ -3654,24 +3622,7 @@ class Orchestrator:
                     f"父任务已标记为 partially_failed\n"
                     f"可通过 opus --resume 恢复任务并重试失败的子任务"
                 )
-                # 推送一次清晰的企微消息
-                await self.ui._wecom_send(
-                    f"⚠️ 任务部分失败\n"
-                    f"失败子任务: {failed_names}\n"
-                    f"请通过 opus --resume --task-id {task.id} 恢复或终止",
-                    append_tips=False,
-                )
                 return  # 直接返回，不执行后续批次和部署
-
-            # 阶段完成通知（企微模式下推送）
-            if self.ui.mode == "wecom" and batch_idx < total_batches - 1:
-                batch_names = ", ".join(s.get("name", f"#{s.get('id', '?')}") for s in batch)
-                await self.ui._wecom_send(
-                    f"📦 阶段 {batch_num}/{total_batches} 完成\n"
-                    f"已完成: {batch_names}\n"
-                    f"剩余: {total_batches - batch_num} 个阶段",
-                    append_tips=True,
-                )
 
         # 3. 所有批次成功完成
         self.ui.print_success(f"所有 {len(sub_tasks)} 个子任务执行完成")
@@ -3739,8 +3690,6 @@ class Orchestrator:
             sub_name = sub_task_def.get("name", sub_task_def["id"])
             self._update_progress(parent_task, "agent_start",
                                   role=f"sub-task:{sub_name}", model="multi")
-            await self._push_step_card(parent_task, "agent_start",
-                                       role=f"sub-task:{sub_name}")
 
             # 写入子任务范围清单（让开发者明确知道自己只需做什么）
             scope_file = sub_task.dir / "00-sub-task-scope.md"
@@ -3863,10 +3812,6 @@ class Orchestrator:
                                       role=f"sub-task:{sub_name}", model="multi",
                                       cost_usd=sub_cost["total_usd"],
                                       duration=sub_duration)
-                await self._push_step_card(parent_task, "agent_complete",
-                                           role=f"sub-task:{sub_name}",
-                                           cost_usd=sub_cost["total_usd"],
-                                           duration=sub_duration)
 
                 # 成功后运行 handoff_extractor 提取交接信息
                 try:
@@ -3899,7 +3844,6 @@ class Orchestrator:
                                       cost_usd=sub_err_cost["total_usd"],
                                       duration=sub_err_duration,
                                       error_msg=str(e)[:200])
-                # 不推送企微卡片（由 _run_multi_task_workflow 统一推送，避免多条消息）
                 self.state._save_state(parent_task)
                 self.ui.print_warning(
                     f"子任务 [{sub_task_def.get('name')}] 失败并已回滚: {e}"
@@ -4577,78 +4521,6 @@ class Orchestrator:
 
         return actions
 
-    async def _push_step_card(self, task: Task, event: str, role: str = "",
-                              cost_usd: float = 0, duration: float = 0,
-                              output_doc: str = "", error_msg: str = "",
-                              rollback: bool = True):
-        """根据事件类型组装企微卡片内容并推送"""
-        from stream_renderer import ROLE_DISPLAY
-
-        if not self.ui.config.get("wecom", {}).get("enabled"):
-            return
-
-        # 子任务角色格式 "sub-task:密码管理（F4）" → 显示为 "子任务：密码管理（F4）"
-        if role.startswith("sub-task:"):
-            role_cn = f"子任务：{role[len('sub-task:'):]}"
-        else:
-            role_cn = ROLE_DISPLAY.get(role, role)
-        task_cost = self.state.get_task_cost(task)
-        total_cost = f"${task_cost['total_usd']:.2f}"
-        n_completed = len(task.completed_steps)
-        total_steps = self._estimate_total_steps(task)
-        task_name = (task.task_name or task.description or "")[:30]
-
-        if event == "agent_start":
-            title = f"🤖 {role_cn}已启动"
-            desc = f"📋 {task_name}\n第 {n_completed + 1}/{total_steps} 步 · 已消耗 {total_cost}"
-
-        elif event == "agent_complete":
-            title = f"✅ {role_cn}完成"
-            dur_str = self._format_duration(duration)
-            parts = [dur_str, f"${cost_usd:.2f}"]
-            if output_doc:
-                parts.append(output_doc)
-            desc = f"📋 {task_name}\n" + " · ".join(parts)
-
-        elif event == "agent_error":
-            title = f"❌ {role_cn}失败"
-            desc = f"📋 {task_name}\n{error_msg[:60]} · 已自动暂停"
-
-        elif event == "pause":
-            title = "⏸️ 任务已暂停"
-            step_cn = self._format_step(task.current_step) if task.current_step else "未知"
-            desc = f"📋 {task_name}\n停在：{step_cn} · {n_completed}/{total_steps} 步 · {total_cost}"
-
-        elif event == "resume":
-            title = "🔄 任务已恢复"
-            step_cn = self._format_step(task.current_step) if task.current_step else "继续执行"
-            desc = f"📋 {task_name}\n{step_cn} · {n_completed}/{total_steps} 步 · {total_cost}"
-
-        elif event == "complete":
-            title = "🎉 任务完成"
-            dur_str = task.duration_str
-            desc = f"📋 {task_name}\n{n_completed}/{total_steps} 步 · 总计 {total_cost} · {dur_str}"
-
-        elif event == "terminate":
-            title = "🛑 任务已终止"
-            if rollback:
-                desc = (f"📋 {task_name}\n已消耗 {total_cost} · 代码已回滚\n"
-                        f"恢复: git cherry-pick opus-snapshot/{task.id}")
-            else:
-                desc = f"📋 {task_name}\n已消耗 {total_cost} · 代码已保留"
-
-        else:
-            return
-
-        try:
-            await self.ui._wecom_push_card(
-                title=title, description=desc,
-                task_id=task.id,
-                btntxt="查看进度" if event == "agent_start" else "查看详情",
-            )
-        except Exception as e:
-            logger.warning(f"步骤卡片推送失败: {e}")
-
     def _format_current_progress(self, task) -> str:
         """根据已完成步骤和当前步骤，生成中文进度描述"""
         if not task.completed_steps:
@@ -5194,9 +5066,8 @@ class Orchestrator:
             write_audit_log(task.dir, "pause", source=source,
                             task_id=task.id, detail="用户主动暂停")
             self.state.pause_task(task, reason="用户主动暂停")
-            # 更新 progress.json + 企微卡片推送
+            # 更新 progress.json
             self._update_progress(task, "pause")
-            await self._push_step_card(task, "pause")
             raise WorkflowPaused("用户主动暂停")
 
         elif action == "rollback":
@@ -5216,7 +5087,7 @@ class Orchestrator:
                             task_id=task.id, detail=f"用户主动终止 (rollback={rollback})")
             await self._handle_terminate_signal(task, rollback=rollback)
             step_label = task.current_step or "未知步骤"
-            source_label = {"web": "Web Console", "terminal": "终端", "wecom": "企微"}.get(source, source or "未知来源")
+            source_label = {"web": "Web Console", "terminal": "终端"}.get(source, source or "未知来源")
             raise WorkflowError(f"用户主动终止（来源: {source_label}，终止时步骤: {step_label}，回滚: {'是' if rollback else '否'}）")
 
     async def _handle_rollback_signal(self, task: Task, target_step: str, feedback: str):
@@ -5267,9 +5138,8 @@ class Orchestrator:
         # 执行安全终止
         await self.state.terminate_task(task, work_dir, rollback=rollback)
 
-        # 更新 progress.json + 企微卡片推送
+        # 更新 progress.json
         self._update_progress(task, "terminate", rollback=rollback)
-        await self._push_step_card(task, "terminate", rollback=rollback)
 
         if rollback:
             self.ui.print_info(
@@ -5393,13 +5263,12 @@ class Orchestrator:
 
         # 保存步骤开始前的 commit hash
 
-        # 更新 progress.json + 企微卡片推送
+        # 更新 progress.json
         if task:
             self._update_progress(
                 task, "agent_start", role=role, model=model,
                 step_name=step_name, attempt=_retry_count + 1,
             )
-            await self._push_step_card(task, "agent_start", role=role)
 
         # 保存步骤开始前的 commit hash（供超时回退使用）
         if task and step_name:
@@ -5481,12 +5350,7 @@ class Orchestrator:
                                         task_id=task.id, detail="子代理执行中暂停（进程冻结）")
                     except Exception as e:
                         logger.error(f"on_paused: write_audit_log 失败: {e}")
-                    # 4. 最不重要：推送企微卡片（涉及网络，最可能失败）
-                    try:
-                        await self._push_step_card(task, "pause")
-                    except Exception as e:
-                        logger.error(f"on_paused: push_step_card 失败: {e}")
-                    # 5. 子任务暂停时，同步更新父任务状态
+                    # 4. 子任务暂停时，同步更新父任务状态
                     if self._current_parent_task_id and self._current_parent_task_id != task.id:
                         try:
                             parent = self.state.load_task(self._current_parent_task_id)
@@ -5505,10 +5369,6 @@ class Orchestrator:
                         self._update_progress(task, "resume", role=role)
                     except Exception as e:
                         logger.error(f"on_resumed: 状态更新失败: {e}")
-                    try:
-                        await self._push_step_card(task, "agent_start", role=role)
-                    except Exception as e:
-                        logger.error(f"on_resumed: push_step_card 失败: {e}")
                     try:
                         (task.dir / "frozen.flag").unlink(missing_ok=True)
                     except Exception as e:
@@ -5575,7 +5435,7 @@ class Orchestrator:
                     )
             # Agent 完成后检查控制信号
 
-            # 更新 progress.json + 企微卡片推送
+            # 更新 progress.json
             if task:
                 output_doc_name = (
                     Path(str(output_path)).name
@@ -5589,9 +5449,6 @@ class Orchestrator:
                                       output_doc=output_doc_name, preview_url=preview_url,
                                       tokens=result.input_tokens + result.output_tokens,
                                       step_name=step_name)
-                await self._push_step_card(task, "agent_complete", role=role,
-                                           cost_usd=result.cost_usd, duration=result.duration,
-                                           output_doc=output_doc_name)
 
             # Agent 完成后检查控制信号
             if task:
@@ -5630,7 +5487,6 @@ class Orchestrator:
                 self._update_progress(task, "agent_error", role=role,
                                       error_msg="API限流",
                                       duration=time.time() - start_time)
-                await self._push_step_card(task, "agent_error", role=role, error_msg="API限流")
             return await self._handle_rate_limit(role, kwargs, e, task=task, step_name=step_name)
         except AgentSignalInterrupt as e:
             self._record_runtime_metadata(task, step_name, getattr(e, "runtime_metadata", None))
@@ -5668,7 +5524,7 @@ class Orchestrator:
                                     task_id=task.id, detail=f"子代理执行中终止 (rollback={rollback})")
                     await self._handle_terminate_signal(task, rollback=rollback)
                     step_label = task.current_step or "未知步骤"
-                    source_label = {"web": "Web Console", "terminal": "终端", "wecom": "企微"}.get(source, source or "未知来源")
+                    source_label = {"web": "Web Console", "terminal": "终端"}.get(source, source or "未知来源")
                     raise WorkflowError(f"用户主动终止（来源: {source_label}，终止时步骤: {step_label}，回滚: {'是' if rollback else '否'}）")
             raise
         except (AgentTimeoutError, AgentError) as e:
@@ -5689,7 +5545,6 @@ class Orchestrator:
                                       error_msg=human_error,
                                       duration=err_duration,
                                       cost_usd=err_cost)
-                await self._push_step_card(task, "agent_error", role=role, error_msg=human_error)
             if task and step_name:
                 max_total_retries = self.config.get("max_total_retries", 3)
                 if _retry_count >= max_total_retries:
@@ -5793,10 +5648,9 @@ class Orchestrator:
 
         start_time = time.time()
 
-        # 更新 progress.json + 企微卡片推送
+        # 更新 progress.json
         if task:
             self._update_progress(task, "agent_start", role=role, model=model, step_name=step_name)
-            await self._push_step_card(task, "agent_start", role=role)
 
         try:
             # 注入 task_id 以便子代理执行中轮询控制信号
@@ -5823,11 +5677,6 @@ class Orchestrator:
                                         task_id=task.id, detail="子代理执行中暂停（进程冻结）")
                     except Exception as e:
                         logger.error(f"on_paused_parallel: write_audit_log 失败: {e}")
-                    try:
-                        await self._push_step_card(task, "pause")
-                    except Exception as e:
-                        logger.error(f"on_paused_parallel: push_step_card 失败: {e}")
-
                 async def on_resumed_parallel(signal):
                     try:
                         task.status = "running"
@@ -5900,7 +5749,7 @@ class Orchestrator:
                         f"📄 {Path(str(output_path)).name} → {preview_url}"
                     )
 
-            # 更新 progress.json + 企微卡片推送
+            # 更新 progress.json
             if task:
                 output_doc_name = (
                     Path(str(output_path)).name
@@ -5914,9 +5763,6 @@ class Orchestrator:
                                       output_doc=output_doc_name, preview_url=preview_url,
                                       tokens=result.input_tokens + result.output_tokens,
                                       step_name=step_name)
-                await self._push_step_card(task, "agent_complete", role=role,
-                                           cost_usd=result.cost_usd, duration=result.duration,
-                                           output_doc=output_doc_name)
 
             return result
 
@@ -5955,7 +5801,7 @@ class Orchestrator:
                                     task_id=task.id, detail=f"子代理执行中终止 (rollback={rollback})")
                     await self._handle_terminate_signal(task, rollback=rollback)
                     step_label = task.current_step or "未知步骤"
-                    source_label = {"web": "Web Console", "terminal": "终端", "wecom": "企微"}.get(source, source or "未知来源")
+                    source_label = {"web": "Web Console", "terminal": "终端"}.get(source, source or "未知来源")
                     raise WorkflowError(f"用户主动终止（来源: {source_label}，终止时步骤: {step_label}，回滚: {'是' if rollback else '否'}）")
             raise
         except (AgentTimeoutError, AgentError, AgentRateLimitError) as e:
@@ -5974,7 +5820,6 @@ class Orchestrator:
                 self._update_progress(task, "agent_error", role=role,
                                       error_msg=str(e)[:200],
                                       duration=time.time() - start_time)
-                await self._push_step_card(task, "agent_error", role=role, error_msg=str(e)[:60])
             raise
 
     async def _handle_agent_exception(
@@ -6065,7 +5910,7 @@ class Orchestrator:
             self.ui.print_warning(f"用户终止任务（{'回滚代码' if rollback else '保留代码'}）")
             await self._handle_terminate_signal(task, rollback=rollback)
             step_label = task.current_step or "未知步骤"
-            source_label = {"wecom": "企微"}.get(self.ui.mode, "确认交互")
+            source_label = "确认交互"
             raise WorkflowError(f"用户主动终止（来源: {source_label}，终止时步骤: {step_label}，回滚: {'是' if rollback else '否'}）")
         else:
             return "pause"  # 默认暂停

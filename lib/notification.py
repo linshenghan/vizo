@@ -13,17 +13,11 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from lib.web_paths import confirm_path, input_path
+from lib.web_paths import confirm_path
 
 _LIB_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _LIB_DIR.parent
 
-
-# 兼容导入：支持作为包内模块或独立脚本运行
-try:
-    from wecom_notifier import WeComNotifier
-except ImportError:
-    from .wecom_notifier import WeComNotifier
 
 try:
     from cache_manager import get_cache_manager
@@ -179,13 +173,11 @@ class WxPusherNotifier:
 
 
 class NotificationManager:
-    """通知管理器（支持企业微信和 WxPusher）"""
+    """通知管理器（支持 WxPusher 和控制台降级）"""
 
     def __init__(self, config: Dict):
         self.config = config
         self._wxpusher: Optional[WxPusherNotifier] = None
-        self._wecom = None  # WeComNotifier
-        self._provider = config.get("notification", {}).get("provider", "wxpusher")
         self._response_callbacks: Dict[str, Callable] = {}
 
     def _load_wxpusher(self) -> Optional[WxPusherNotifier]:
@@ -203,29 +195,9 @@ class NotificationManager:
         self._wxpusher = WxPusherNotifier(app_token, uid)
         return self._wxpusher
 
-    def _load_wecom(self):
-        """加载企业微信通知器"""
-        if self._wecom:
-            return self._wecom
-
-        secrets = self.config.get("secrets", {})
-        corpid = secrets.get("wecom_corpid", "")
-        agentid = secrets.get("wecom_agentid", "")
-        secret = secrets.get("wecom_secret", "")
-        userid = secrets.get("wecom_userid", "")
-
-        if not all([corpid, agentid, secret, userid]):
-            return None
-
-        self._wecom = WeComNotifier(corpid, agentid, secret, userid)
-        return self._wecom
-
     def _load_notifier(self):
         """加载当前通知器（兼容旧代码）"""
-        if self._provider == "wecom":
-            return self._load_wecom() or self._load_wxpusher()
-        else:
-            return self._load_wxpusher() or self._load_wecom()
+        return self._load_wxpusher()
 
     async def notify(
         self,
@@ -238,7 +210,7 @@ class NotificationManager:
         extra_data: dict = None
     ) -> Optional[str]:
         """
-        发送通知（自动选择企业微信或 WxPusher）
+        发送通知（优先使用 WxPusher，不可用时降级到控制台）
         
         Args:
             notification_type: 通知类型
@@ -302,19 +274,13 @@ class NotificationManager:
             except Exception as e:
                 print(f"[NotificationManager] 注册 pending_request 失败: {e}")
 
-        # 根据通知器类型分发
-        if isinstance(notifier, WeComNotifier):
-            result = await self._send_via_wecom(
-                notifier, notification_type, title, content, request_id, options
-            )
-        else:
-            result = await notifier.send_notification(
-                notification_type=notification_type,
-                title=title,
-                content=content,
-                request_id=request_id,
-                options=options
-            )
+        result = await notifier.send_notification(
+            notification_type=notification_type,
+            title=title,
+            content=content,
+            request_id=request_id,
+            options=options
+        )
 
         if not result.get("success", False) and "error" in result:
             print(f"[NotificationManager] 发送失败: {result.get('error')}")
@@ -325,85 +291,6 @@ class NotificationManager:
 
         # 等待响应
         return await self._wait_for_response(request_id, timeout, title, content)
-
-    async def _send_via_wecom(
-        self, notifier, notification_type, title, content, request_id, options
-    ) -> Dict:
-        """通过企业微信发送通知（卡片+文本双发，解决新域名需申诉问题）"""
-        emoji_map = {
-            NotificationType.AUTH_REQUIRED: "🔐",
-            NotificationType.CONFIRM_NEEDED: "⚠️",
-            NotificationType.INFO_SUPPLEMENT: "📝",
-            NotificationType.TASK_PAUSED: "⏸️",
-            NotificationType.TASK_COMPLETED: "✅",
-            NotificationType.PROGRESS_REPORT: "📊",
-            NotificationType.ERROR_CRITICAL: "❌"
-        }
-        emoji = emoji_map.get(notification_type, "📢")
-
-        # 确认类通知：使用文本卡片（可点击跳转确认页面）
-        is_confirm = notification_type in [
-            NotificationType.AUTH_REQUIRED,
-            NotificationType.CONFIRM_NEEDED,
-        ]
-
-        # 输入类通知：使用文本卡片（可点击跳转输入页面）
-        is_input = notification_type == NotificationType.INFO_SUPPLEMENT
-
-        result = {"success": False}
-        action_url = None
-
-        if is_confirm:
-            action_url = await get_confirm_url(request_id)
-            if action_url:
-                desc = f"{content}\n\n请求ID: {request_id}"
-                # 1. 发送卡片消息
-                result = await notifier.send_textcard(
-                    title=f"{emoji} {title}",
-                    description=desc,
-                    url=action_url,
-                    btntxt="确认/取消"
-                )
-                # 2. 发送完整文本消息（恢复原格式）
-                text_msg = f"{emoji} {title}\n\n{content}\n\n---\n请求ID: {request_id}\n👉 点击确认/取消: {action_url}"
-                await notifier.send_text(text_msg)
-
-                result["request_id"] = request_id
-                return result
-
-        if is_input:
-            action_url = await get_input_url(request_id)
-            if action_url:
-                desc = f"{content}\n\n请求ID: {request_id}"
-                # 1. 发送卡片消息
-                result = await notifier.send_textcard(
-                    title=f"{emoji} {title}",
-                    description=desc,
-                    url=action_url,
-                    btntxt="点击回复"
-                )
-                # 2. 发送完整文本消息（恢复原格式）
-                text_msg = f"{emoji} {title}\n\n{content}\n\n---\n请求ID: {request_id}\n👉 点击回复: {action_url}"
-                await notifier.send_text(text_msg)
-
-                result["request_id"] = request_id
-                return result
-
-        # 普通通知或无 URL：使用文本消息
-        message = f"{emoji} {title}\n\n{content}"
-
-        if is_confirm:
-            message += f"\n\n---\n请求ID: {request_id}"
-            message += f"\n回复方式: opus3-reply {request_id} Y/N"
-        elif is_input:
-            message += f"\n\n---\n请求ID: {request_id}"
-            message += f"\n回复方式: opus3-reply {request_id} 你的回复"
-
-        message += f"\n\n时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-        result = await notifier.send_text(message)
-        result["request_id"] = request_id
-        return result
 
     async def _wait_for_response(self, request_id: str, timeout: int,
                                    title: str = "", content: str = "") -> Optional[str]:
@@ -458,21 +345,14 @@ class NotificationManager:
                         else:
                             reply_hint = f"回复方式: opus3-reply {request_id} Y/N"
 
-                        if isinstance(notifier, WeComNotifier):
-                            await notifier.send_text(
-                                f"⏰ 提醒\n\n请求 {request_id} 等待回复中...\n"
-                                f"剩余时间: {(timeout - elapsed) // 60} 分钟\n\n"
-                                f"{reply_hint}"
-                            )
-                        else:
-                            await notifier.send_message(
-                                f"⏰ **提醒**\n\n请求 `{request_id}` 等待回复中...\n\n"
-                                f"剩余时间: {(timeout - elapsed) // 60} 分钟\n\n"
-                                f"{reply_hint}",
-                                summary=f"⏰ 请求 {request_id} 等待回复",
-                                content_type=3,
-                                url=confirm_url or ""
-                            )
+                        await notifier.send_message(
+                            f"⏰ **提醒**\n\n请求 `{request_id}` 等待回复中...\n\n"
+                            f"剩余时间: {(timeout - elapsed) // 60} 分钟\n\n"
+                            f"{reply_hint}",
+                            summary=f"⏰ 请求 {request_id} 等待回复",
+                            content_type=3,
+                            url=confirm_url or ""
+                        )
 
             # 超时，不删除 pending_request（让它自然过期，用户还能看到页面）
             notifier = self._load_notifier()
@@ -570,27 +450,6 @@ async def get_confirm_url(request_id: str) -> Optional[str]:
         return None
     except Exception:
         return None
-
-
-async def get_input_url(request_id: str) -> Optional[str]:
-    """从 Redis 获取输入页面 URL
-
-    Args:
-        request_id: 请求ID
-
-    Returns:
-        完整的输入页面 URL，如 https://xxx.trycloudflare.com/vizo/input/{request_id}
-        如果 confirm_server 未运行或无 tunnel URL，返回 None
-    """
-    try:
-        cm = await get_cache_manager()
-        tunnel_url = await cm._client.get("confirm_server:tunnel_url")
-        if tunnel_url:
-            return tunnel_url.rstrip("/") + input_path(request_id)
-        return None
-    except Exception:
-        return None
-
 
 # 全局实例
 _notification_manager: Optional[NotificationManager] = None

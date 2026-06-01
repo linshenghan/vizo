@@ -63,7 +63,6 @@ def main():
                     r.delete(key)
 
                 # === 逻辑2: 保存工作状态（原 pre_compact_saver） ===
-                import asyncio
                 from datetime import datetime
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -76,53 +75,6 @@ def main():
                 }
                 r.lpush(f"compact_events:{project}", json.dumps(compact_event))
                 r.ltrim(f"compact_events:{project}", 0, 49)
-
-                # 获取工作状态摘要
-                work_state_summary = ""
-                try:
-                    from work_state import WorkStateManager
-                    wsm = WorkStateManager(r, project)
-                    state = wsm.get_current_state()
-                    if state:
-                        work_state_summary = state.get("summary", "")[:300]
-                except Exception:
-                    pass
-
-                # 企微通知（5秒超时）
-                try:
-                    config_path = CONFIG_FILE
-                    with open(config_path) as f:
-                        config = json.load(f)
-
-                    secrets = config.get("secrets", {})
-                    if secrets.get("wecom_corp_id") and secrets.get("wecom_agent_secret"):
-                        from wecom_notification import WeComNotifier
-                        notifier = WeComNotifier(
-                            corp_id=secrets.get('wecom_corp_id', ''),
-                            agent_id=secrets.get('wecom_agent_id', ''),
-                            agent_secret=secrets.get('wecom_agent_secret', ''),
-                            userid=secrets.get('wecom_userid', '')
-                        )
-
-                        async def send():
-                            try:
-                                await asyncio.wait_for(
-                                    notifier.send_text(
-                                        f"⚠️ [上下文压缩] {project}\n\n"
-                                        f"会话内容已自动保存到记忆。\n"
-                                        f"时间: {timestamp}\n\n"
-                                        f"工作状态:\n{work_state_summary}"
-                                    ),
-                                    timeout=5.0
-                                )
-                            except asyncio.TimeoutError:
-                                pass
-                            finally:
-                                await notifier.close()
-
-                        asyncio.run(send())
-                except Exception:
-                    pass
 
                 messages.append("使用 `/opus` 重新激活智能协作模式")
 

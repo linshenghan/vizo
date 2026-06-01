@@ -3012,7 +3012,7 @@ body {
   <!-- Step 3: Done -->
   <div class="step-panel" id="step-2">
     <div class="step-title">设置完成</div>
-    <div class="step-desc">你已完成基础配置。如需配置企微通知，可稍后在设置中添加。</div>
+    <div class="step-desc">你已完成基础配置，可以进入控制台继续使用 Vizo。</div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="finishSetup()">进入控制台</button>
     </div>

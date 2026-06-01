@@ -9,7 +9,6 @@ Vizo 智能协作系统
 import sys
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 
 # 添加项目根目录与 lib 模块路径
@@ -129,13 +128,13 @@ def check_and_start_services() -> list:
         # 尝试通过 systemd 启动
         try:
             result = subprocess.run(
-                ["systemctl", "--user", "start", "wecom-callback.service"],
+                ["systemctl", "--user", "start", "vizo-secretary.service"],
                 capture_output=True, timeout=5
             )
             if result.returncode == 0:
                 messages.append("🌐 确认服务已通过 systemd 启动")
             else:
-                messages.append("⚠️ 确认服务未运行，请手动检查: systemctl --user status wecom-callback")
+                messages.append("⚠️ 确认服务未运行，请手动检查: systemctl --user status vizo-secretary")
         except Exception as e:
             messages.append(f"⚠️ 确认服务启动失败: {e}")
 
@@ -277,28 +276,6 @@ def main():
                 tools_installed = read_tools_installed()
                 if tools_installed:
                     messages.append(f"## 已安装 MCP 工具清单\n{tools_installed}")
-
-                # 会话注册：写入 Redis 注册表，供企微消息路由使用
-                try:
-                    import redis as sync_redis
-                    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'lib'))
-                    from session_utils import get_session_project
-                    r_reg = sync_redis.Redis(host="127.0.0.1", port=6380,
-                                             decode_responses=True,
-                                             socket_timeout=1, socket_connect_timeout=1)
-                    claude_pid = os.getppid()
-                    project_name = get_session_project(cwd)
-                    session_id = f"{project_name}:{claude_pid}"
-                    session_data = json.dumps({
-                        "project": project_name,
-                        "pid": claude_pid,
-                        "cwd": cwd,
-                        "started_at": datetime.now().isoformat()
-                    })
-                    r_reg.set(f"claude_session:{session_id}", session_data, ex=7200)
-                    r_reg.close()
-                except Exception:
-                    pass
 
                 if recall:
                     messages.append(f"📚 上次会话回忆:\n{recall[:600]}")

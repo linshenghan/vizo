@@ -3,7 +3,6 @@
 Vizo 秘书进程 — confirm_server 生命周期管理器
 
 管理 confirm_server 的启动、健康检查和重启。
-企微消息路由已迁移到 confirm_server + pre_tool_dispatcher，
 指令调度功能已被 Web 控制台完全替代。
 
 用法：
@@ -109,13 +108,7 @@ class Secretary:
     async def run(self):
         """主循环：管理 confirm_server 生命周期"""
         await self._start_confirm_server()
-
-        # 企微状态日志（与 confirm_server.py 风格一致）
-        wecom_enabled = self.config.get("wecom", {}).get("enabled", False)
-        if wecom_enabled:
-            logger.info("秘书进程启动，企微功能已启用")
-        else:
-            logger.info("秘书进程启动，企微未启用（如需启用请设置 WECOM_ENABLED=true）")
+        logger.info("秘书进程启动")
 
         try:
             while not self._shutdown:

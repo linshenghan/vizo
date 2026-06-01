@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 JSON 到 HTML 转换服务
-为企业微信消息提供美化的 HTML 文档
+提供美化的 HTML 文档
 支持响应式设计，适配移动端
 """
 
@@ -211,7 +211,7 @@ class JsonToHtmlConverter:
 
         <div class="footer">
             <p>这是由 OPUS V6 自动生成的文档</p>
-            <p>如有问题，请在企业微信中反馈</p>
+            <p>如有问题，请在 Web 控制台中反馈</p>
         </div>
     </div>
 </body>

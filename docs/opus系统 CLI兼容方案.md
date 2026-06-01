@@ -10,19 +10,20 @@
 
 系统与 Claude Code 有 **6 层深度耦合**：
 
-| 层级 | 依赖点 | 耦合程度 | 替代难度 |
-|------|--------|---------|---------|
-| 1 | `claude -p` 子进程启动 | 核心 | 中 |
-| 2 | `--output-format stream-json` NDJSON 流式协议 | 核心 | 高 |
-| 3 | `--model` / `--fallback-model` / `--allowedTools` | 配置 | 低 |
-| 4 | `--resume session_id` 会话恢复 | 功能 | 中 |
-| 5 | Hooks 系统（6+ 个 hook 文件） | 深度 | **极高** |
-| 6 | Claude Code 内置工具（Read/Write/Edit/Bash/Glob/Grep） | 间接 | N/A（由后端提供）|
+| 层级  | 依赖点                                               | 耦合程度 | 替代难度       |
+| --- | ------------------------------------------------- | ---- | ---------- |
+| 1   | `claude -p` 子进程启动                                 | 核心   | 中          |
+| 2   | `--output-format stream-json` NDJSON 流式协议         | 核心   | 高          |
+| 3   | `--model` / `--fallback-model` / `--allowedTools` | 配置   | 低          |
+| 4   | `--resume session_id` 会话恢复                        | 功能   | 中          |
+| 5   | Hooks 系统（6+ 个 hook 文件）                            | 深度   | **极高**     |
+| 6   | Claude Code 内置工具（Read/Write/Edit/Bash/Glob/Grep）  | 间接   | N/A（由后端提供） |
 
 **最关键的耦合是 Hooks**。当前系统通过 Claude Code 的 `PreToolUse`/`PostToolUse`/`Stop` 等 hook 实现了：
+
 - 确认请求检测（`pre_tool_dispatcher.py`）
 - 暂停反馈注入（pause_feedback via Redis）
-- 企微消息路由（`session_start.py`）
+- 会话生命周期路由（`session_start.py`）
 - 会话生命周期管理（`stop_guard.py`）
 - 权限通知、完成通知等
 
@@ -32,18 +33,18 @@
 
 ## 2. Claude Code vs Codex CLI 协议对比
 
-| 维度 | Claude Code | Codex CLI | 兼容难度 |
-|------|------------|-----------|---------|
-| **非交互命令** | `claude -p - --output-format stream-json` | `codex exec --json "prompt"` | 低 |
-| **Prompt 输入** | stdin 管道 | 命令行参数或 stdin | 低 |
-| **流式输出** | NDJSON（stdout） | JSONL（stdout） | **中**（schema 不同）|
-| **模型选择** | `--model opus` | `--model gpt-4o` | 低 |
-| **工具权限** | `--allowedTools Read,Write,Bash` | `--sandbox` + `--ask-for-approval` | 中 |
-| **会话恢复** | `--resume <session_id>` | `codex exec resume <session_id>` | 低 |
-| **Hooks 系统** | 原生支持（`.claude/hooks/`） | **无** | **高** |
-| **费用追踪** | `result` 事件含 `usage`/`modelUsage`/`total_cost_usd` | `turn.completed` 含 `usage`（无费用金额） | 中 |
-| **进度标记** | `system.init` 含 `session_id` | `thread.started` 含 `thread_id` | 低 |
-| **MCP 支持** | 原生支持 | 支持（`codex mcp`） | 需测试 |
+| 维度            | Claude Code                                        | Codex CLI                          | 兼容难度             |
+| ------------- | -------------------------------------------------- | ---------------------------------- | ---------------- |
+| **非交互命令**     | `claude -p - --output-format stream-json`          | `codex exec --json "prompt"`       | 低                |
+| **Prompt 输入** | stdin 管道                                           | 命令行参数或 stdin                       | 低                |
+| **流式输出**      | NDJSON（stdout）                                     | JSONL（stdout）                      | **中**（schema 不同） |
+| **模型选择**      | `--model opus`                                     | `--model gpt-4o`                   | 低                |
+| **工具权限**      | `--allowedTools Read,Write,Bash`                   | `--sandbox` + `--ask-for-approval` | 中                |
+| **会话恢复**      | `--resume <session_id>`                            | `codex exec resume <session_id>`   | 低                |
+| **Hooks 系统**  | 原生支持（`.claude/hooks/`）                             | **无**                              | **高**            |
+| **费用追踪**      | `result` 事件含 `usage`/`modelUsage`/`total_cost_usd` | `turn.completed` 含 `usage`（无费用金额）  | 中                |
+| **进度标记**      | `system.init` 含 `session_id`                       | `thread.started` 含 `thread_id`     | 低                |
+| **MCP 支持**    | 原生支持                                               | 支持（`codex mcp`）                    | 需测试              |
 
 ### 事件流 Schema 对比
 
@@ -97,14 +98,14 @@
 
 ### 改动范围评估
 
-| 文件 | 改动类型 | 说明 |
-|------|---------|------|
-| `agent_runner.py` | **重构** | 提取 Backend 接口，`run()` 方法委托给 Backend |
-| `config.json` | **新增字段** | `agent_backend: "claude_code" \| "codex"` |
-| `lib/backends/` | **新建** | `base.py`、`claude_code.py`、`codex.py` |
-| `lib/event_adapter.py` | **新建** | 统一事件格式转换器 |
-| `hooks/` | **无改动** | Claude Code 模式下照常工作 |
-| `orchestrator.py` | **极少改动** | 只需传递 backend 配置 |
+| 文件                     | 改动类型     | 说明                                        |
+| ---------------------- | -------- | ----------------------------------------- |
+| `agent_runner.py`      | **重构**   | 提取 Backend 接口，`run()` 方法委托给 Backend       |
+| `config.json`          | **新增字段** | `agent_backend: "claude_code" \| "codex"` |
+| `lib/backends/`        | **新建**   | `base.py`、`claude_code.py`、`codex.py`     |
+| `lib/event_adapter.py` | **新建**   | 统一事件格式转换器                                 |
+| `hooks/`               | **无改动**  | Claude Code 模式下照常工作                       |
+| `orchestrator.py`      | **极少改动** | 只需传递 backend 配置                           |
 
 ---
 
@@ -131,12 +132,11 @@ class UnifiedEvent:
 
 这是最大挑战。Hooks 承担了 4 个关键功能：
 
-| Hook 功能 | Claude Code 实现 | Codex 替代方案 |
-|-----------|----------------|---------------|
-| 确认请求检测 | `pre_tool_dispatcher.py`（每次工具调用时检查） | **轮询 wrapper**：Backend 在事件循环中每 N 秒检查 `.opus/confirms/` |
-| 暂停反馈注入 | Redis → hook → `system-reminder` | **进程信号**：SIGCONT 后 Codex 的 `codex exec resume` 机制 |
-| 企微消息消费 | hook 每次工具调用时从 Redis 读取 | **轮询 wrapper**：同确认检测 |
-| 会话注册/注销 | `session_start.py` / `stop_guard.py` | **Backend 生命周期回调**：在 `execute()` 前后调用 |
+| Hook 功能 | Claude Code 实现                       | Codex 替代方案                                             |
+| ------- | ------------------------------------ | ------------------------------------------------------ |
+| 确认请求检测  | `pre_tool_dispatcher.py`（每次工具调用时检查）  | **轮询 wrapper**：Backend 在事件循环中每 N 秒检查 `.opus/confirms/` |
+| 暂停反馈注入  | Redis → hook → `system-reminder`     | **进程信号**：SIGCONT 后 Codex 的 `codex exec resume` 机制      |
+| 会话注册/注销 | `session_start.py` / `stop_guard.py` | **Backend 生命周期回调**：在 `execute()` 前后调用                  |
 
 关键洞察：**Hooks 本质上是"Agent 执行期间的周期性副作用"**。Claude Code 的 hook 恰好在每次工具调用时触发，但我们可以在 Backend 的事件循环中模拟：
 
@@ -149,7 +149,6 @@ async for line in process.stdout:
     # 模拟 hook 功能：每次收到事件时执行
     if event["type"] in ("item.started", "item.completed"):
         await self._check_confirms()        # 替代 pre_tool_dispatcher
-        await self._consume_wecom_msgs()    # 替代企微消息消费
         await self._check_control_signals() # 替代暂停/终止检测
 
     yield unified
@@ -198,12 +197,12 @@ def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
 
 ## 5. 不可兼容的差异（需接受的限制）
 
-| 特性 | Claude Code | Codex | 影响 |
-|------|------------|-------|------|
-| 暂停反馈注入 | Redis → hook → system-reminder | 无等价机制 | Codex 下暂停后只能 terminate+resume |
-| `--allowedTools` 精细控制 | 按工具名白名单 | 只有粗粒度 sandbox | Codex 下无法限制"只许读不许写" |
-| Fallback 模型 | `--fallback-model` | 无 | Codex 下需要在 Backend 层实现重试切模型 |
-| 流式渲染细节 | 事件粒度更细（partial messages） | 事件粒度较粗 | Codex 下直播面板信息略少 |
+| 特性                    | Claude Code                    | Codex         | 影响                            |
+| --------------------- | ------------------------------ | ------------- | ----------------------------- |
+| 暂停反馈注入                | Redis → hook → system-reminder | 无等价机制         | Codex 下暂停后只能 terminate+resume |
+| `--allowedTools` 精细控制 | 按工具名白名单                        | 只有粗粒度 sandbox | Codex 下无法限制"只许读不许写"           |
+| Fallback 模型           | `--fallback-model`             | 无             | Codex 下需要在 Backend 层实现重试切模型   |
+| 流式渲染细节                | 事件粒度更细（partial messages）       | 事件粒度较粗        | Codex 下直播面板信息略少               |
 
 ---
 

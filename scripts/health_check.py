@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-"""健康检查脚本 - 检查 Redis + Wecom Callback 服务状态"""
+"""健康检查脚本 - 检查 Redis 服务状态"""
 
 import argparse
 import json
 import sys
 import threading
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_CONFIG_PATH = str(Path(__file__).resolve().parents[1] / "config.json")
-DEFAULT_CALLBACK_PORT = 8080
 DEFAULT_TIMEOUT = 5
 
 
@@ -81,47 +78,12 @@ def check_redis(host: str, port: int, password, db: int, timeout: int) -> dict:
             "error": f"连接超时 (Timeout after {timeout}s)"}
 
 
-def check_wecom_callback(url: str, timeout: int) -> dict:
-    """检查 Wecom Callback Server 健康端点
-
-    返回字典：
-    - 成功: {"status": "ok", "latency_ms": 12.45, "url": "..."}
-    - 失败: {"status": "error", "error": "...", "url": "..."}
-    """
-    base = {"url": url}
-    try:
-        req = urllib.request.Request(url, method="GET")
-        start = time.monotonic()
-        resp = urllib.request.urlopen(req, timeout=timeout)
-        latency = (time.monotonic() - start) * 1000
-
-        if resp.status == 200:
-            return {**base, "status": "ok", "latency_ms": round(latency, 2)}
-        else:
-            return {**base, "status": "error",
-                    "error": f"异常状态码: {resp.status}"}
-    except urllib.error.URLError as e:
-        if isinstance(e.reason, ConnectionRefusedError):
-            return {**base, "status": "error",
-                    "error": "服务未运行 (Connection refused)"}
-        elif isinstance(e.reason, TimeoutError):
-            return {**base, "status": "error",
-                    "error": f"请求超时 (Timeout after {timeout}s)"}
-        else:
-            return {**base, "status": "error",
-                    "error": f"请求异常: {e.reason}"}
-    except Exception as e:
-        return {**base, "status": "error", "error": f"请求异常: {e}"}
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="健康检查 - 检查 Redis + Wecom Callback 服务状态"
+        description="健康检查 - 检查 Redis 服务状态"
     )
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH,
                         help=f"配置文件路径 (默认: {DEFAULT_CONFIG_PATH})")
-    parser.add_argument("--callback-port", type=int, default=DEFAULT_CALLBACK_PORT,
-                        help=f"Callback server 端口 (默认: {DEFAULT_CALLBACK_PORT})")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
                         help=f"各项检查超时时间/秒 (默认: {DEFAULT_TIMEOUT})")
     parser.add_argument("--pretty", action="store_true",
@@ -141,23 +103,17 @@ def main():
         redis_password = redis_cfg.get("password", "") or None
         redis_db = redis_cfg.get("db", 0)
 
-        callback_url = f"http://localhost:{args.callback_port}/health"
         timeout = args.timeout
 
-        # 执行检查（串行，互不干扰）
         redis_result = check_redis(redis_host, redis_port, redis_password, redis_db, timeout)
-        callback_result = check_wecom_callback(callback_url, timeout)
 
-        # 汇总输出
-        overall = "healthy" if (redis_result["status"] == "ok"
-                               and callback_result["status"] == "ok") else "unhealthy"
+        overall = "healthy" if redis_result["status"] == "ok" else "unhealthy"
 
         result = {
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "overall": overall,
             "checks": {
-                "redis": redis_result,
-                "wecom_callback": callback_result
+                "redis": redis_result
             }
         }
         if config_warning:

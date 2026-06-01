@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""用户界面：终端 + 企微两种模式
-
-优化记录:
-- 优化1: 卡片+文本双推送 (_wecom_send_dual)
-- 优化2: Web 页面回复替代企微对话框 (_create_web_confirm, _wecom_wait_web_reply)
-- 优化3: 回复确认反馈 (_send_reply_feedback)
-- 优化4a: 重复推送提醒机制 (remind_schedule in _wecom_wait_web_reply)
-- 优化5a: 中断检查 (check_interrupt)
-"""
+"""用户界面：终端 + Web 确认页面"""
 
 import asyncio
 import hashlib
@@ -20,11 +12,10 @@ from pathlib import Path
 
 from lib.paths import CONFIRMS_DIR, PREVIEWS_DIR
 from lib.preview_server import get_base_url
-from lib.web_paths import absolute_url, confirm_path, preview_path, task_detail_path
+from lib.web_paths import absolute_url, confirm_path, preview_path
 
 logger = logging.getLogger(__name__)
 
-# 中断指令提示（追加到企微消息末尾）
 from dataclasses import dataclass, field
 
 
@@ -61,7 +52,6 @@ BUTTON_SET_CONFIGS = {
             {"label": "✎ 补充修改意见", "action": "f", "icon": "edit"},
             {"label": "✗ 取消任务", "action": "n", "icon": "cancel", "confirm_required": True},
         ],
-        "wecom_hint": "📋 快捷回复：1=确认继续 2=修改意见 3=取消任务",
     },
     "doc_review_discussion": {
         "buttons": [
@@ -70,7 +60,6 @@ BUTTON_SET_CONFIGS = {
             {"label": "💬 发起讨论", "action": "d", "icon": "chat"},
             {"label": "✗ 取消任务", "action": "n", "icon": "cancel", "confirm_required": True},
         ],
-        "wecom_hint": "📋 快捷回复：1=确认 2=修改意见 3=发起讨论 4=取消",
     },
     "agent_exception": {
         "buttons": [
@@ -78,14 +67,12 @@ BUTTON_SET_CONFIGS = {
             {"label": "⏸ 暂停等待", "action": "n", "icon": "pause"},
             {"label": "🛑 终止任务", "action": "terminate", "icon": "stop"},
         ],
-        "wecom_hint": "⚡ 快捷回复：1=重试 2=暂停等待 3=终止任务",
     },
     "terminate_rollback_choice": {
         "buttons": [
             {"label": "🔄 回滚代码", "action": "confirm", "icon": "rollback"},
             {"label": "📌 保留代码", "action": "cancel", "icon": "keep"},
         ],
-        "wecom_hint": "⚠️ 此任务已修改代码，请选择：1=回滚代码 2=保留代码",
     },
     "subtask_failure": {
         "buttons": [
@@ -93,14 +80,12 @@ BUTTON_SET_CONFIGS = {
             {"label": "🛑 终止任务", "action": "terminate", "icon": "stop"},
             {"label": "💬 提供修改意见", "action": "f", "icon": "edit"},
         ],
-        "wecom_hint": "⚠️ 子任务失败：1=恢复重试 2=终止任务 3=修改意见",
     },
     "deploy_confirm": {
         "buttons": [
             {"label": "✓ 确认部署", "action": "y", "icon": "deploy"},
             {"label": "✗ 取消", "action": "n", "icon": "cancel"},
         ],
-        "wecom_hint": "🚀 快捷回复：1=确认部署 2=取消",
     },
     "generic_confirm": {
         "buttons": [
@@ -108,7 +93,6 @@ BUTTON_SET_CONFIGS = {
             {"label": "✗ 取消", "action": "n", "icon": "cancel"},
             {"label": "✎ 补充意见", "action": "f", "icon": "edit"},
         ],
-        "wecom_hint": "📋 快捷回复：1=确认 2=取消 3=补充意见",
     },
     "doc_review_ra_design": {
         "buttons": [
@@ -118,7 +102,6 @@ BUTTON_SET_CONFIGS = {
             {"label": "🎨 发起交互设计", "action": "i", "icon": "design"},
             {"label": "✗ 取消任务", "action": "n", "icon": "cancel", "confirm_required": True},
         ],
-        "wecom_hint": "📋 快捷回复：1=确认 2=修改意见 3=讨论 4=交互设计 5=取消",
     },
     "doc_review_pm_design": {
         "buttons": [
@@ -127,12 +110,8 @@ BUTTON_SET_CONFIGS = {
             {"label": "🎨 发起交互设计", "action": "i", "icon": "design"},
             {"label": "✗ 取消任务", "action": "n", "icon": "cancel", "confirm_required": True},
         ],
-        "wecom_hint": "📋 快捷回复：1=确认 2=修改意见 3=交互设计 4=取消",
     },
 }
-
-
-INTERRUPT_TIPS = "\n\n---\n💡 随时回复「叫停」「中断」「暂停」或「stop」可中断当前流程"
 
 
 class UserInterface:
@@ -140,17 +119,10 @@ class UserInterface:
 
     def __init__(self, config: dict = None):
         self.config = config or {}
-        self.mode = self.config.get("ui_mode", "terminal")
-        self._wecom_enabled = self.config.get("wecom", {}).get("enabled", False)
+        self.mode = "terminal"
         self._current_task_id = None
-        # 企微 access_token 缓存
-        self._access_token = None
-        self._token_expires = 0
-        # WeComNotifier 实例缓存（优化1）
-        self._notifier = None
-        # Web 页面内联提交的修改内容（优化2: 无需二次交互）
+        # Web 页面内联提交的修改内容（无需二次交互）
         self._pending_feedback = None
-        # 进度显示实例（优化4b）
         self._progress_display = None
         # 自动确认模式：跳过所有人工确认，直接 confirm
         self.auto_confirm = False
@@ -186,10 +158,7 @@ class UserInterface:
         if self.auto_confirm:
             logger.info(f"[auto-confirm] 自动确认: {message}")
             return True
-        if self.mode == "terminal":
-            return self._terminal_confirm(message)
-        else:
-            return await self._wecom_confirm(message)
+        return self._terminal_confirm(message)
 
     def _terminal_confirm(self, message: str) -> bool:
         import sys
@@ -367,14 +336,13 @@ class UserInterface:
             logger.info(f"[auto-confirm] 自动确认(with_feedback): {message}")
             return "confirm"
 
-        # ── 统一企微推送（不管 TTY / 非 TTY / wecom 模式，推送内容一致）──
         summary = self._summarize_file(file, max_chars=500) if file else ""
         preview_link = ""
         web_url = ""
         web_request_id = ""
         bridge_request_id = ""  # 仅非 TTY terminal 使用
 
-        # ── 始终创建 Web 确认页（confirm_server 独立于企微运行）──
+        # ── 始终创建 Web 确认页 ──
         try:
             preview_link = await self._upload_preview(file)
             web_request_id, web_url = await self._create_web_confirm(
@@ -387,143 +355,110 @@ class UserInterface:
         except Exception as e:
             logger.warning(f"Web 确认页创建失败: {e}")
 
-        # ── 企微通知（可选）──
-        if self.config.get("wecom", {}).get("enabled") and web_url:
-            try:
-                await self._wecom_send_dual(
-                    title=message[:60],
-                    summary=summary[:200] if summary else "请查看并确认",
-                    web_url=web_url,
-                    preview_link=preview_link,
-                    allow_discussion=allow_discussion,
-                    context=context,
-                )
-            except Exception as e:
-                logger.warning(f"企微确认通知推送失败: {e}")
+        import sys
+        if not sys.stdin.isatty():
+            # 非 TTY：通过 confirm_bridge 文件 IPC 跨进程确认
+            from lib.confirm_bridge import create_request, wait_for_response
 
-        # ── 按模式等待用户响应 ──
-        if self.mode == "terminal":
-            import sys
-            if not sys.stdin.isatty():
-                # 非 TTY：通过 confirm_bridge 文件 IPC 跨进程确认
-                from lib.confirm_bridge import create_request, wait_for_response
+            task_id = self._current_task_id or "default"
+            req_type = ("confirm_with_discussion"
+                        if allow_discussion else "confirm_with_feedback")
 
-                task_id = self._current_task_id or "default"
-                req_type = ("confirm_with_discussion"
-                            if allow_discussion else "confirm_with_feedback")
+            context_dict = None
+            if context:
+                context_dict = {
+                    "task_name": context.task_name,
+                    "task_id": context.task_id,
+                    "role": context.role,
+                    "role_display": context.role_display,
+                    "step": context.step,
+                    "step_display": context.step_display,
+                    "model": context.model,
+                    "cost_usd": context.cost_usd,
+                    "input_tokens": context.input_tokens,
+                    "output_tokens": context.output_tokens,
+                    "duration": context.duration,
+                    "total_cost_usd": context.total_cost_usd,
+                    "total_tokens": context.total_tokens,
+                    "completed_steps": context.completed_steps,
+                    "total_steps": context.total_steps,
+                    "file_path": context.file_path,
+                    "button_set": context.button_set,
+                }
 
-                context_dict = None
-                if context:
-                    context_dict = {
-                        "task_name": context.task_name,
-                        "task_id": context.task_id,
-                        "role": context.role,
-                        "role_display": context.role_display,
-                        "step": context.step,
-                        "step_display": context.step_display,
-                        "model": context.model,
-                        "cost_usd": context.cost_usd,
-                        "input_tokens": context.input_tokens,
-                        "output_tokens": context.output_tokens,
-                        "duration": context.duration,
-                        "total_cost_usd": context.total_cost_usd,
-                        "total_tokens": context.total_tokens,
-                        "completed_steps": context.completed_steps,
-                        "total_steps": context.total_steps,
-                        "file_path": context.file_path,
-                        "button_set": context.button_set,
-                    }
-
-                bridge_request_id = create_request(
-                    task_id=task_id,
-                    message=message,
-                    file_path=file,
-                    summary=summary,
-                    preview_link=preview_link,
-                    req_type=req_type,
-                    context=context_dict,
-                )
-                logger.info(f"确认请求已创建: {bridge_request_id}")
-
-                # 关联 Web 确认页 → bridge，让 Web 端回复也能触发 bridge
-                if web_request_id and bridge_request_id:
-                    await self._link_web_to_bridge(
-                        web_request_id, bridge_request_id)
-
-                # 输出 Web 确认链接到 stderr，供 CLI 用户直接访问
-                if web_url:
-                    import sys as _sys
-                    print(f"OPUS_CONFIRM_URL|{bridge_request_id}|{web_url}",
-                          file=_sys.stderr, flush=True)
-
-                action, feedback = wait_for_response(
-                    bridge_request_id, timeout=7200)
-                if action == "feedback" and feedback:
-                    self._pending_feedback = feedback
-                return action
-
-            # TTY：终端交互
-            self.pause_progress()
-            try:
-                print(f"\n{message}")
-                if context:
-                    if context.task_name:
-                        print(f"   📋 任务：{context.task_name}")
-                    if context.role_display:
-                        print(f"   🤖 角色：{context.role_display}")
-                    if context.duration > 0:
-                        m, s = divmod(int(context.duration), 60)
-                        dur_str = f"{m}分{s}秒" if m else f"{s}秒"
-                        print(f"   ⏱️  耗时：{dur_str} | "
-                              f"${context.cost_usd:.2f} | "
-                              f"{context.input_tokens + context.output_tokens:,} tokens")
-                    if context.total_cost_usd > 0:
-                        progress = f"{len(context.completed_steps)}/{context.total_steps}"
-                        print(f"   📊 任务进度：{progress} | 累计 ${context.total_cost_usd:.2f}")
-                if file and file.exists():
-                    if preview_link:
-                        print(f"   📎 在线预览：{preview_link}")
-                    print(f"   📁 本地文件：{file}")
-
-                prompt_parts, mapping = self._build_confirm_prompt(
-                    allow_discussion=allow_discussion,
-                    context=context,
-                )
-                prompt_text = "  ".join(prompt_parts)
-                if web_request_id:
-                    action, feedback_content = await self._wait_for_terminal_or_web_reply(
-                        prompt_text,
-                        mapping,
-                        web_request_id=web_request_id,
-                        timeout=7200,
-                    )
-                else:
-                    choice = input("   " + prompt_text + ": ").strip().lower()
-                    action = mapping.get(choice, "confirm")
-                    feedback_content = ""
-
-                if action == "feedback" and feedback_content:
-                    self._pending_feedback = feedback_content
-                return action
-            finally:
-                self.resume_progress()
-        else:
-            # wecom 模式：Web 确认页 + 企微文本回复双通道
-            # 企微推送已在上方统一完成，此处只做响应等待
-            bs = context.button_set if context else "generic_confirm"
-            action, feedback_content = await self._wecom_wait_web_reply(
-                web_request_id, timeout=7200, web_url=web_url, title=message,
-                button_set=bs,
+            bridge_request_id = create_request(
+                task_id=task_id,
+                message=message,
+                file_path=file,
+                summary=summary,
+                preview_link=preview_link,
+                req_type=req_type,
+                context=context_dict,
             )
+            logger.info(f"确认请求已创建: {bridge_request_id}")
 
-            # 发送确认反馈（优化3）
-            await self._send_reply_feedback(action, feedback_content)
+            # 关联 Web 确认页 → bridge，让 Web 端回复也能触发 bridge
+            if web_request_id and bridge_request_id:
+                await self._link_web_to_bridge(
+                    web_request_id, bridge_request_id)
 
-            # 存储修改内容供 get_user_feedback() 直接返回
+            # 输出 Web 确认链接到 stderr，供 CLI 用户直接访问
+            if web_url:
+                import sys as _sys
+                print(f"OPUS_CONFIRM_URL|{bridge_request_id}|{web_url}",
+                      file=_sys.stderr, flush=True)
+
+            action, feedback = wait_for_response(
+                bridge_request_id, timeout=7200)
+            if action == "feedback" and feedback:
+                self._pending_feedback = feedback
+            return action
+
+        # TTY：终端交互
+        self.pause_progress()
+        try:
+            print(f"\n{message}")
+            if context:
+                if context.task_name:
+                    print(f"   📋 任务：{context.task_name}")
+                if context.role_display:
+                    print(f"   🤖 角色：{context.role_display}")
+                if context.duration > 0:
+                    m, s = divmod(int(context.duration), 60)
+                    dur_str = f"{m}分{s}秒" if m else f"{s}秒"
+                    print(f"   ⏱️  耗时：{dur_str} | "
+                          f"${context.cost_usd:.2f} | "
+                          f"{context.input_tokens + context.output_tokens:,} tokens")
+                if context.total_cost_usd > 0:
+                    progress = f"{len(context.completed_steps)}/{context.total_steps}"
+                    print(f"   📊 任务进度：{progress} | 累计 ${context.total_cost_usd:.2f}")
+            if file and file.exists():
+                if preview_link:
+                    print(f"   📎 在线预览：{preview_link}")
+                print(f"   📁 本地文件：{file}")
+
+            prompt_parts, mapping = self._build_confirm_prompt(
+                allow_discussion=allow_discussion,
+                context=context,
+            )
+            prompt_text = "  ".join(prompt_parts)
+            if web_request_id:
+                action, feedback_content = await self._wait_for_terminal_or_web_reply(
+                    prompt_text,
+                    mapping,
+                    web_request_id=web_request_id,
+                    timeout=7200,
+                )
+            else:
+                choice = input("   " + prompt_text + ": ").strip().lower()
+                action = mapping.get(choice, "confirm")
+                feedback_content = ""
+
             if action == "feedback" and feedback_content:
                 self._pending_feedback = feedback_content
-
             return action
+        finally:
+            self.resume_progress()
 
     async def get_user_feedback(self) -> str:
         """获取用户的文本反馈"""
@@ -533,13 +468,8 @@ class UserInterface:
             self._pending_feedback = None
             return feedback
 
-        if self.mode == "terminal":
-            print("   请输入你的修改意见（输入完按回车）:")
-            return input("   > ").strip()
-        else:
-            await self._wecom_send("请输入你的修改意见：")
-            reply = await self._wecom_wait_reply(timeout=7200)
-            return reply.strip()
+        print("   请输入你的修改意见（输入完按回车）:")
+        return input("   > ").strip()
 
     # ─────────────── 输出方法 ───────────────
 
@@ -577,249 +507,6 @@ class UserInterface:
             self._progress_display.live_print(msg)
         else:
             print(msg)
-
-    # ─────────────── 企微对接 ───────────────
-
-    async def _wecom_confirm(self, message: str) -> bool:
-        """简单确认（布尔值）- 精确匹配指令"""
-        if not self._wecom_enabled:
-            return False
-        await self._wecom_send(f"{message}\n\n回复 1=确认 / 2=取消")
-        while True:
-            reply = await self._wecom_wait_reply(timeout=7200)
-            text = reply.strip()
-            if text in ("1", "确认", "y", "yes"):
-                await self._send_reply_feedback("confirm")
-                return True
-            if text in ("2", "取消", "n", "no"):
-                await self._send_reply_feedback("cancel")
-                return False
-            # 未识别，发送帮助提示
-            await self._wecom_send(
-                f"未识别指令「{text[:20]}」\n请回复：1=确认 / 2=取消",
-                append_tips=False,
-            )
-
-    async def _wecom_send(self, message: str, append_tips: bool = True):
-        """通过企微自建应用 API 发送文本消息"""
-        if not self._wecom_enabled:
-            return
-        if append_tips:
-            message = message.rstrip() + INTERRUPT_TIPS
-        try:
-            import aiohttp
-            token = await self._get_access_token()
-            url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={token}"
-            wecom_config = self.config.get("wecom", {})
-            payload = {
-                "touser": "@all",
-                "msgtype": "text",
-                "agentid": wecom_config.get("agent_id", 1000002),
-                "text": {"content": message[:2048]},
-            }
-            async with aiohttp.ClientSession() as session:
-                resp = await session.post(url, json=payload)
-                result = await resp.json()
-                if result.get("errcode", 0) != 0:
-                    logger.error(f"企微发送失败: {result}")
-        except Exception as e:
-            print(f"[企微发送失败: {e}] {message[:100]}")
-
-    async def _get_access_token(self) -> str:
-        """获取企微 access_token（带缓存，有效期 7200 秒）"""
-        if self._access_token and time.time() < self._token_expires:
-            return self._access_token
-
-        import aiohttp
-        wecom_config = self.config.get("wecom", {})
-        corp_id = wecom_config.get("corp_id", "")
-        corp_secret = wecom_config.get("corp_secret", "")
-        url = (
-            f"https://qyapi.weixin.qq.com/cgi-bin/gettoken"
-            f"?corpid={corp_id}&corpsecret={corp_secret}"
-        )
-        async with aiohttp.ClientSession() as session:
-            resp = await session.get(url)
-            data = await resp.json()
-
-        if data.get("errcode", 0) != 0:
-            raise RuntimeError(f"获取 access_token 失败: {data.get('errmsg', 'unknown')}")
-
-        self._access_token = data["access_token"]
-        # 提前 5 分钟刷新，避免边界过期
-        self._token_expires = time.time() + data.get("expires_in", 7200) - 300
-        return self._access_token
-
-    async def _wecom_wait_reply(self, timeout: int = 7200) -> str:
-        """通过 Redis 轮询等待企微回复"""
-        try:
-            import redis.asyncio as aioredis
-            r = aioredis.from_url("redis://localhost:6379")
-            task_id = self._current_task_id or "default"
-            key = f"opus:reply:{task_id}"
-            # 告知 callback server 当前等待回复的 task_id
-            await r.set("opus:active_task", task_id, ex=timeout)
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-                reply = await r.get(key)
-                if reply:
-                    await r.delete(key)
-                    await r.close()
-                    return reply.decode()
-                await asyncio.sleep(3)
-            await r.close()
-            raise TimeoutError("企微回复超时")
-        except ImportError:
-            logger.warning("redis 未安装，降级到终端输入")
-            return input("请输入回复: ").strip()
-
-    # ─────────────── WeComNotifier 桥接（优化1）───────────────
-
-    def _get_wecom_notifier(self):
-        """懒加载 WeComNotifier"""
-        if self._notifier is None:
-            from lib.wecom_notifier import WeComNotifier
-            wecom_cfg = self.config.get("wecom", {})
-            self._notifier = WeComNotifier(
-                corpid=wecom_cfg.get("corp_id", ""),
-                agentid=str(wecom_cfg.get("agent_id", "")),
-                secret=wecom_cfg.get("corp_secret", ""),
-                userid=wecom_cfg.get("userid", "@all"),
-            )
-        return self._notifier
-
-    async def _wecom_send_dual(self, title: str, summary: str,
-                                web_url: str, preview_link: str = "",
-                                allow_discussion: bool = False,
-                                context: "ConfirmContext" = None):
-        """卡片消息 + 文本消息双推送（优化1）"""
-        if not self._wecom_enabled:
-            return
-        notifier = self._get_wecom_notifier()
-
-        # 1. 发送卡片消息（点击进入确认页面）
-        card_parts = []
-        if context:
-            if context.task_name:
-                card_parts.append(f"📋 {context.task_name[:30]}")
-            role_step = []
-            if context.role_display:
-                role_step.append(context.role_display)
-            if context.step_display:
-                role_step.append(context.step_display)
-            if role_step:
-                card_parts.append(" | ".join(role_step))
-        if summary:
-            remaining = 200 - sum(len(p) for p in card_parts) - len(card_parts) * 2
-            card_parts.append(summary[:max(50, remaining)])
-        card_desc = "\n".join(card_parts) if card_parts else summary[:200]
-
-        try:
-            await notifier.send_textcard(
-                title=title[:128],
-                description=card_desc[:512],
-                url=web_url,
-                btntxt="查看并确认",
-            )
-        except Exception as e:
-            logger.warning(f"卡片消息发送失败: {e}")
-
-        # 2. 发送文本消息（含上下文信息 + 指令说明 + 中断提示）
-        ctx_lines = []
-        if context:
-            if context.task_name:
-                ctx_lines.append(f"📋 任务：{context.task_name[:40]}")
-
-            role_info = []
-            if context.role_display:
-                role_info.append(f"🤖 {context.role_display}")
-            if context.model:
-                model_short = {"claude-opus-4-7": "opus",
-                               "claude-opus-4-6": "opus",
-                               "claude-sonnet-4-7": "sonnet",
-                               "claude-sonnet-4-6": "sonnet",
-                               "claude-sonnet-4-5-20250929": "sonnet",
-                               "claude-haiku-4-7": "haiku",
-                               "claude-haiku-4-5": "haiku",
-                               "claude-haiku-4-5-20251001": "haiku"}.get(context.model, context.model)
-                role_info.append(model_short)
-            if role_info:
-                ctx_lines.append(" | ".join(role_info))
-
-            cost_parts = []
-            if context.duration > 0:
-                m, s = divmod(int(context.duration), 60)
-                cost_parts.append(f"⏱️ {m}分{s}秒" if m else f"⏱️ {s}秒")
-            if context.cost_usd > 0:
-                cost_parts.append(f"💰 ${context.cost_usd:.2f}")
-            if context.input_tokens + context.output_tokens > 0:
-                total_t = context.input_tokens + context.output_tokens
-                cost_parts.append(f"📊 {total_t:,} tokens")
-            if cost_parts:
-                ctx_lines.append(" | ".join(cost_parts))
-
-            if context.total_cost_usd > 0:
-                progress = f"{len(context.completed_steps)}/{context.total_steps}"
-                ctx_lines.append(f"📈 任务进度 {progress} | 累计 ${context.total_cost_usd:.2f}")
-
-        ctx_block = "\n".join(ctx_lines)
-
-        doc_line = f"\n📄 查看完整文档：{preview_link}" if preview_link else ""
-        file_line = ""
-        if context and context.file_path:
-            file_line = f"\n📁 本地路径：{context.file_path}"
-
-        bs = context.button_set if context else "generic_confirm"
-        bs_config = BUTTON_SET_CONFIGS.get(bs, BUTTON_SET_CONFIGS["generic_confirm"])
-        quick_reply = bs_config["wecom_hint"]
-
-        if ctx_block:
-            text = (
-                f"{title}\n\n"
-                f"{ctx_block}\n\n"
-                f"{summary}"
-                f"{doc_line}"
-                f"{file_line}\n\n"
-                f"👉 点击确认页面：{web_url}\n\n"
-                f"{quick_reply}"
-                f"{INTERRUPT_TIPS}"
-            )
-        else:
-            text = (
-                f"{title}\n\n"
-                f"{summary}"
-                f"{doc_line}\n\n"
-                f"👉 点击确认页面：{web_url}\n\n"
-                f"{quick_reply}"
-                f"{INTERRUPT_TIPS}"
-            )
-        try:
-            await notifier.send_text(text[:2048])
-        except Exception as e:
-            logger.warning(f"文本消息发送失败: {e}")
-            await self._wecom_send(text[:2048], append_tips=False)
-
-    async def _wecom_push_card(self, title: str, description: str,
-                               task_id: str, btntxt: str = "查看详情"):
-        """通用企微卡片推送（非确认场景的单向通知）"""
-        if not self._wecom_enabled:
-            return
-        base_url = (self.config.get("wecom", {})
-                    .get("callback_server", {})
-                    .get("url", "https://opus.bingbing.asia/wecom/callback"))
-        preview_base = base_url.rsplit("/wecom/callback", 1)[0]
-        url = absolute_url(preview_base, task_detail_path(task_id))
-
-        try:
-            notifier = self._get_wecom_notifier()
-            await notifier.send_textcard(
-                title=title[:128],
-                description=description[:512],
-                url=url,
-                btntxt=btntxt,
-            )
-        except Exception as e:
-            logger.warning(f"卡片推送失败: {e}")
 
     # ─────────────── Web 确认页面（优化2）───────────────
 
@@ -936,88 +623,6 @@ class UserInterface:
 
         return request_id, web_url
 
-    async def _wecom_wait_web_reply(self, request_id: str, timeout: int = 7200,
-                                     web_url: str = "", title: str = "",
-                                     button_set: str = "generic_confirm") -> tuple:
-        """双通道等待回复：Web 页面(Redis 6380) + 企微文本(Redis 6379)
-
-        返回: (action, feedback_content)
-              action = 'confirm' | 'cancel' | 'feedback'
-              feedback_content = 修改内容或 None
-        """
-        import redis.asyncio as aioredis
-
-        preview_redis_url = self.config.get("preview_redis_url", "redis://localhost:6380")
-        r_web = aioredis.from_url(preview_redis_url)
-        r_wecom = aioredis.from_url("redis://localhost:6379")
-
-        task_id = self._current_task_id or "default"
-        wecom_reply_key = f"opus:reply:{task_id}"
-        web_response_key = f"response:{request_id}"
-
-        # 告知 callback server 当前等待回复的 task_id
-        await r_wecom.set("opus:active_task", task_id, ex=timeout)
-
-        deadline = time.time() + timeout
-        # 提醒调度（优化4a）
-        remind_schedule = [180, 600, 1800]  # 3分钟, 10分钟, 30分钟
-        reminded_count = 0
-        start_time = time.time()
-
-        try:
-            while time.time() < deadline:
-                # 检查 Web 页面回复（主路径，零歧义）
-                web_reply = await r_web.get(web_response_key)
-                if web_reply:
-                    await r_web.delete(web_response_key)
-                    return self._parse_web_reply(web_reply.decode())
-
-                # 检查企微文本回复（降级路径，精确匹配）
-                wecom_reply = await r_wecom.get(wecom_reply_key)
-                if wecom_reply:
-                    await r_wecom.delete(wecom_reply_key)
-                    reply_text = wecom_reply.decode().strip()
-                    action, content = self._parse_wecom_reply(reply_text, button_set)
-                    if action == "unknown":
-                        # 未识别，根据 button_set 生成帮助提示
-                        bs_config = BUTTON_SET_CONFIGS.get(button_set, BUTTON_SET_CONFIGS["generic_confirm"])
-                        hint_lines = []
-                        for i, btn in enumerate(bs_config["buttons"], 1):
-                            hint_lines.append(f"  {i} = {btn['label']}")
-                        help_msg = (
-                            f"未识别指令「{reply_text[:20]}」\n\n"
-                            f"请回复：\n"
-                            + "\n".join(hint_lines)
-                            + "\n\n"
-                            f"或点击确认页面操作：{web_url}"
-                        )
-                        await self._wecom_send(help_msg, append_tips=False)
-                        continue
-                    return action, content
-
-                # 提醒机制（优化4a）
-                elapsed = time.time() - start_time
-                if (reminded_count < len(remind_schedule)
-                        and elapsed >= remind_schedule[reminded_count]):
-                    reminded_count += 1
-                    remind_msg = (
-                        f"⏰ 提醒（第{reminded_count}次）: {title[:40]}\n\n"
-                        f"等待您的确认已 {int(elapsed / 60)} 分钟\n"
-                        f"👉 {web_url}"
-                    )
-                    notifier = self._get_wecom_notifier()
-                    try:
-                        await notifier.send_text(remind_msg + INTERRUPT_TIPS)
-                    except Exception:
-                        await self._wecom_send(remind_msg)
-
-                await asyncio.sleep(3)
-
-            raise TimeoutError("等待回复超时")
-        finally:
-            await r_web.close()
-            await r_wecom.close()
-
     @staticmethod
     def _parse_web_reply(reply_str: str) -> tuple:
         """解析 Web 页面回复（枚举值，零歧义）"""
@@ -1034,72 +639,6 @@ class UserInterface:
         if reply_str in ("terminate",):
             return "terminate", None
         return "confirm", None
-
-    @staticmethod
-    def _parse_wecom_reply(reply_text: str, button_set: str = "generic_confirm") -> tuple:
-        """精确解析企微文本回复，根据 button_set 动态映射数字
-
-        返回: (action, content)
-              action = 'confirm' | 'cancel' | 'feedback' | 'discussion' | 'terminate' | 'unknown'
-        """
-        text = reply_text.strip()
-
-        # 构建动态数字映射：数字 N → 第 N 个按钮的 action
-        action_to_result = {
-            "y": "confirm", "n": "cancel", "f": "feedback",
-            "d": "discussion", "i": "interaction_design",
-            "terminate": "terminate", "resume": "resume",
-        }
-        bs_config = BUTTON_SET_CONFIGS.get(button_set, BUTTON_SET_CONFIGS["generic_confirm"])
-        digit_map = {}
-        for i, btn in enumerate(bs_config["buttons"], 1):
-            digit_map[str(i)] = action_to_result.get(btn["action"], btn["action"])
-
-        # 数字精确匹配
-        if text in digit_map:
-            return digit_map[text], None
-
-        # 中文关键字匹配
-        if text == "确认":
-            return "confirm", None
-        if text == "取消":
-            return "cancel", None
-        if text == "讨论":
-            return "discussion", None
-
-        # 前缀匹配：修改指令（查找 feedback action 对应的数字键）
-        feedback_digits = [k for k, v in digit_map.items() if v == "feedback"]
-        prefixes = ["修改 ", "修改:", "修改："]
-        for fd in feedback_digits:
-            prefixes.extend([f"{fd} ", f"{fd}:", f"{fd}："])
-        for prefix in prefixes:
-            if text.startswith(prefix):
-                content = text[len(prefix):].strip()
-                if content:
-                    return "feedback", content
-                return "unknown", None  # 前缀后无内容
-
-        return "unknown", None
-
-    async def _send_reply_feedback(self, action: str, content: str = None):
-        """收到回复后立即发送确认反馈（优化3）"""
-        if action == "confirm":
-            msg = "✅ 已收到确认，正在继续执行..."
-        elif action == "cancel":
-            msg = "🛑 已收到取消指令，任务将终止"
-        elif action == "feedback":
-            preview = (content[:50] + "...") if content and len(content) > 50 else (content or "")
-            msg = f"✏️ 已收到修改意见: {preview}\n正在根据意见修改..."
-        elif action == "discussion":
-            msg = "💬 已发起方向讨论，正在启动技术评估..."
-        else:
-            return
-
-        notifier = self._get_wecom_notifier()
-        try:
-            await notifier.send_text(msg)
-        except Exception:
-            await self._wecom_send(msg, append_tips=False)
 
     # ─────────────── 进度显示（优化4b）───────────────
 
@@ -1133,35 +672,8 @@ class UserInterface:
 
     # ─────────────── 辅助方法 ───────────────
 
-    async def check_wecom_services(self) -> dict:
-        """检查企微相关服务可用性，返回 {'callback': bool, 'redis': bool}"""
-        if not self._wecom_enabled:
-            return {"callback": False, "redis": False}
-        result = {"callback": False, "redis": False}
-
-        # 检查 callback server
-        try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                resp = await session.get("http://localhost:9390/health", timeout=aiohttp.ClientTimeout(total=3))
-                result["callback"] = resp.status == 200
-        except Exception:
-            pass
-
-        # 检查 Redis
-        try:
-            import redis.asyncio as aioredis
-            r = aioredis.from_url("redis://localhost:6379")
-            await r.ping()
-            result["redis"] = True
-            await r.close()
-        except Exception:
-            pass
-
-        return result
-
     def _summarize_file(self, file: Path, max_chars: int = 500) -> str:
-        """从 Markdown 文件提取结构化摘要，适合企微文本消息展示"""
+        """从 Markdown 文件提取结构化摘要。"""
         if not file or not file.exists():
             return ""
         content = file.read_text(encoding="utf-8")
@@ -1266,11 +778,14 @@ class UserInterface:
             finally:
                 await r.close()
 
-            base_url = (self.config.get("wecom", {})
-                        .get("callback_server", {})
-                        .get("url", "https://opus.bingbing.asia/wecom/callback"))
-            # 从 callback URL 推导 preview URL
-            preview_base = base_url.rsplit("/wecom/callback", 1)[0]
+            public_base = str(self.config.get("public_base_url", "") or "").strip()
+            custom_domain = str(self.config.get("custom_domain", "") or "").strip()
+            if public_base:
+                preview_base = public_base.rstrip("/")
+            elif custom_domain:
+                preview_base = f"https://{custom_domain}"
+            else:
+                preview_base = "http://127.0.0.1:9390"
             return absolute_url(preview_base, preview_path(preview_id))
         except Exception as e:
             logger.warning(f"上传预览失败: {e}")

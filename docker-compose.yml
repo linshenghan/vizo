@@ -17,7 +17,6 @@ services:
       VIZO_HOST_NPM_MOUNT: /opt/vizo-host/npm-global
       VIZO_RUNTIME_NPM_PREFIX: /usr/local
       WEB_CONSOLE_TOKEN: ${VIZO_WEB_CONSOLE_TOKEN:-}
-      WECOM_ENABLED: "false"
       REDIS_HOST: vizo-redis
       REDIS_PORT: "6379"
       TZ: Asia/Shanghai

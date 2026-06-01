@@ -2547,7 +2547,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
           <button class="settings-nav-item" data-section="role-models" onclick="switchSettingsSection('role-models')">角色配置</button>
           <button class="settings-nav-item" data-section="mcp-tools" onclick="switchSettingsSection('mcp-tools')">MCP 工具</button>
           <button class="settings-nav-item" data-section="network" onclick="switchSettingsSection('network')">网络配置</button>
-          <button class="settings-nav-item" data-section="wecom" onclick="switchSettingsSection('wecom')">企业微信集成</button>
           <button class="settings-nav-item" data-section="password" onclick="switchSettingsSection('password')">控制台密码</button>
         </div>
         <div class="settings-main">
@@ -2712,7 +2711,7 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
           <div class="settings-panel" data-section="network">
             <div class="settings-panel-scroll">
               <div class="settings-panel-title">网络配置</div>
-              <div class="settings-panel-desc">配置公网域名后，可生成手机可访问的预览链接，企业微信通知也会使用该地址作为回调入口。</div>
+              <div class="settings-panel-desc">配置公网域名后，可生成手机可访问的预览链接。</div>
               <div class="settings-subsection">
                 <div id="domain-status" style="margin-bottom:1rem;font-size:0.85rem;color:var(--text-muted)">加载中...</div>
                 <div class="settings-field">
@@ -2725,50 +2724,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
             <div class="settings-page-actions">
               <span class="settings-actions-state clean" id="settings-state-network">未修改</span>
               <button id="save-network-btn" class="settings-save" onclick="saveDomain()">保存网络配置</button>
-            </div>
-          </div>
-
-          <div class="settings-panel" data-section="wecom">
-            <div class="settings-panel-scroll">
-              <div class="settings-panel-title">企业微信集成</div>
-              <div class="settings-panel-desc">启用后，任务进度、确认请求等会推送到企业微信。修改后需重启服务生效。</div>
-              <div id="wecom-domain-tip" class="settings-note warn" style="display:none"></div>
-              <div class="settings-subsection">
-                <div id="wecom-status" style="margin-bottom:1rem;font-size:0.85rem;color:var(--text-muted)">加载中...</div>
-                <div class="settings-field" style="display:flex;align-items:center;gap:0.6rem">
-                  <input type="checkbox" id="wecom-enabled" style="width:auto;margin:0">
-                  <label for="wecom-enabled" style="display:inline;margin:0;cursor:pointer">启用企微通知</label>
-                </div>
-                <div class="settings-field">
-                  <label>企业 ID (Corp ID)</label>
-                  <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">企业微信管理后台 → 我的企业 → 企业信息 → 企业 ID，以 ww 开头</div>
-                  <input type="text" id="wecom-corpid" placeholder="ww..." autocomplete="off">
-                </div>
-                <div class="settings-field">
-                  <label>应用密钥 (Corp Secret)</label>
-                  <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">应用管理 → 自建应用 → 点击应用 → Secret（需管理员授权查看）</div>
-                  <input type="text" id="wecom-secret" placeholder="未配置" autocomplete="off">
-                </div>
-                <div class="settings-field">
-                  <label>应用 ID (Agent ID)</label>
-                  <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">同一个自建应用页面顶部的 AgentId，纯数字</div>
-                  <input type="number" id="wecom-agentid" placeholder="1000002" autocomplete="off">
-                </div>
-                <div class="settings-field">
-                  <label>回调 Token</label>
-                  <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">自建应用 → 接收消息 → 设置 API 接收 → Token（用于验证消息来源）</div>
-                  <input type="text" id="wecom-cb-token" placeholder="未配置" autocomplete="off">
-                </div>
-                <div class="settings-field">
-                  <label>回调 AES Key</label>
-                  <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">同上页面的 EncodingAESKey（用于消息加解密，43 位字符串）</div>
-                  <input type="text" id="wecom-cb-aeskey" placeholder="未配置" autocomplete="off">
-                </div>
-              </div>
-            </div>
-            <div class="settings-page-actions">
-              <span class="settings-actions-state clean" id="settings-state-wecom">未修改</span>
-              <button id="save-wecom-btn" class="settings-save" onclick="saveWecom()">保存企业微信配置</button>
             </div>
           </div>
 
@@ -7703,7 +7658,6 @@ const _settingsSectionMeta = {
   'external-models': {buttonId: 'save-external-models-btn', stateId: 'settings-state-external-models', pendingText: '保存中...'},
   'role-models': {buttonId: 'save-role-models-btn', stateId: 'settings-state-role-models', pendingText: '保存中...', secondaryButtonId: 'reset-role-models-btn'},
   'network': {buttonId: 'save-network-btn', stateId: 'settings-state-network', pendingText: '保存中...'},
-  'wecom': {buttonId: 'save-wecom-btn', stateId: 'settings-state-wecom', pendingText: '保存中...'},
   'password': {buttonId: 'save-password-btn', stateId: 'settings-state-password', pendingText: '修改中...'}
 };
 
@@ -7802,25 +7756,6 @@ function _isNetworkDirty() {
   return input.value.trim() !== (input.dataset.orig || '');
 }
 
-function _isWecomDirty() {
-  const enabledEl = document.getElementById('wecom-enabled');
-  if (!enabledEl) return false;
-  const enabledChanged = (enabledEl.checked ? '1' : '0') !== (enabledEl.dataset.orig || '0');
-  const simpleFields = ['wecom-corpid', 'wecom-agentid'];
-  for (const id of simpleFields) {
-    const el = document.getElementById(id);
-    if (el && el.value.trim() !== (el.dataset.orig || '')) return true;
-  }
-  const maskedFields = ['wecom-secret', 'wecom-cb-token', 'wecom-cb-aeskey'];
-  for (const id of maskedFields) {
-    const el = document.getElementById(id);
-    const value = el?.value.trim() || '';
-    const orig = el?.dataset.orig || '';
-    if (value && value !== orig) return true;
-  }
-  return enabledChanged;
-}
-
 function _isPasswordDirty() {
   return ['old-password', 'new-password', 'confirm-password'].some(function(id) {
     return (document.getElementById(id)?.value || '').trim() !== '';
@@ -7833,7 +7768,6 @@ function _isSettingsSectionDirty(section) {
   if (section === 'role-models') return _isRoleModelsDirty();
   if (section === 'mcp-tools') return _isMcpToolsDirty();
   if (section === 'network') return _isNetworkDirty();
-  if (section === 'wecom') return _isWecomDirty();
   if (section === 'password') return _isPasswordDirty();
   return false;
 }
@@ -7882,7 +7816,6 @@ function _saveCurrentSettingsSection() {
   if (_currentSettingsSection === 'external-models') return saveExternalModelsConfig();
   if (_currentSettingsSection === 'role-models') return saveModels();
   if (_currentSettingsSection === 'network') return saveDomain();
-  if (_currentSettingsSection === 'wecom') return saveWecom();
   if (_currentSettingsSection === 'password') return changePassword();
 }
 
@@ -7935,8 +7868,6 @@ function _reloadSettingsDrafts() {
   loadSavedConnections();
   loadExternalModels();
   loadDomainStatus();
-  loadWecomStatus();
-  updateWecomDomainTip();
   _refreshSettingsSectionState('password');
 }
 
@@ -7993,7 +7924,6 @@ function closeSettings() {
   }
   _settingsNeedsReload = true;
   _modelsLoaded = false;
-  _wecomLoaded = false;
   _showMainView(_settingsReturnView || 'terminal');
 }
 
@@ -8049,9 +7979,6 @@ function switchSettingsSection(section) {
     loadMcpTools();
   } else if (section === 'network') {
     loadDomainStatus();
-  } else if (section === 'wecom') {
-    loadWecomStatus();
-    updateWecomDomainTip();
   }
   _refreshSettingsSectionState(section);
 }
@@ -9806,11 +9733,6 @@ async function loadDomainStatus() {
     } else {
       html += '<span style="color:var(--text-muted)">○ 未配置域名</span>';
     }
-    if (d.has_wecom_config) {
-      html += '<br><span style="color:var(--green)">● 企微配置已就绪，回调地址: ' + d.callback_url + '</span>';
-    } else {
-      html += '<br><span style="color:var(--text-muted)">○ 企微配置未就绪</span>';
-    }
     el.innerHTML = html;
     const input = document.getElementById('domain-input');
     input.value = d.custom_domain || '';
@@ -9845,120 +9767,11 @@ async function saveDomain() {
     if (d.success) {
       showToast('保存成功，有效 URL: ' + d.effective_url, 'success');
       await loadDomainStatus();
-      await updateWecomDomainTip();
     } else {
       showToast('保存失败', 'error');
     }
   } catch(e) { showToast('网络错误', 'error'); }
   finally { _setSettingsActionLoading('network', false); }
-}
-
-// ======================== WeCom Config ========================
-let _wecomLoaded = false;
-async function updateWecomDomainTip() {
-  const tip = document.getElementById('wecom-domain-tip');
-  if (!tip) return;
-  try {
-    const r = await fetch('/vizo/console/api/settings/domain');
-    if (!r.ok) {
-      tip.style.display = 'none';
-      return;
-    }
-    const d = await r.json();
-    if (!d.custom_domain || d.custom_domain === '') {
-      tip.textContent = '提示：未配置公网域名，企微通知链接将使用本地地址';
-      tip.style.display = '';
-    } else {
-      tip.style.display = 'none';
-    }
-  } catch(e) {
-    tip.style.display = 'none';
-  }
-}
-
-async function loadWecomStatus() {
-  const el = document.getElementById('wecom-status');
-  try {
-    const r = await fetch('/vizo/console/api/settings/wecom');
-    if (r.status === 401) { el.textContent = '请先登录'; return; }
-    const d = await r.json();
-    _wecomLoaded = true;
-    let html = '';
-    if (d.enabled) {
-      html += '<span style="color:var(--green)">● 企微通知已启用</span>';
-    } else {
-      html += '<span style="color:var(--text-muted)">○ 企微通知未启用</span>';
-    }
-    if (d.corp_id && d.corp_id !== '') {
-      html += ' — 企业 ID: ' + d.corp_id;
-    }
-    if (d.callback_url) {
-      html += '<br><span style="color:var(--text-muted)">回调地址: <code>' + d.callback_url + '</code></span>';
-    }
-    if (d.outgoing_ip) {
-      html += '<br><span style="color:var(--orange)">IP 白名单: 请在企微后台 → 自建应用 → 企业可信IP → 添加 <code style="user-select:all;cursor:pointer">' + d.outgoing_ip + '</code>，否则无法推送消息</span>';
-    }
-    el.innerHTML = html;
-    const enabledEl = document.getElementById('wecom-enabled');
-    enabledEl.checked = d.enabled;
-    enabledEl.dataset.orig = d.enabled ? '1' : '0';
-    const corpIdEl = document.getElementById('wecom-corpid');
-    corpIdEl.value = d.corp_id || '';
-    corpIdEl.dataset.orig = d.corp_id || '';
-    const agentIdEl = document.getElementById('wecom-agentid');
-    agentIdEl.value = d.agent_id || '';
-    agentIdEl.dataset.orig = d.agent_id || '';
-    const secretEl = document.getElementById('wecom-secret');
-    secretEl.value = d.secret_masked || '';
-    secretEl.dataset.orig = d.secret_masked || '';
-    secretEl.placeholder = d.has_secret ? '已配置（留空保持不变）' : '未配置';
-    const tokenEl = document.getElementById('wecom-cb-token');
-    tokenEl.value = d.callback_token_masked || '';
-    tokenEl.dataset.orig = d.callback_token_masked || '';
-    tokenEl.placeholder = d.has_callback_token ? '已配置（留空保持不变）' : '未配置';
-    const aesEl = document.getElementById('wecom-cb-aeskey');
-    aesEl.value = d.callback_aes_key_masked || '';
-    aesEl.dataset.orig = d.callback_aes_key_masked || '';
-    aesEl.placeholder = d.has_callback_aes_key ? '已配置（留空保持不变）' : '未配置';
-  } catch(e) { el.textContent = '加载失败'; }
-  _refreshSettingsSectionState('wecom');
-}
-
-async function saveWecom() {
-  if (!_isWecomDirty()) {
-    _refreshSettingsSectionState('wecom');
-    showToast('企业微信配置没有需要保存的改动', 'success');
-    return;
-  }
-  const enabled = document.getElementById('wecom-enabled').checked;
-  const corp_id = document.getElementById('wecom-corpid').value.trim();
-  const corp_secret = document.getElementById('wecom-secret').value.trim();
-  const agent_id = document.getElementById('wecom-agentid').value.trim();
-  const cb_token = document.getElementById('wecom-cb-token').value.trim();
-  const cb_aes_key = document.getElementById('wecom-cb-aeskey').value.trim();
-  const body = { enabled };
-  if (corp_id) body.corp_id = corp_id;
-  if (corp_secret && !corp_secret.includes('***')) body.corp_secret = corp_secret;
-  if (agent_id) body.agent_id = parseInt(agent_id) || 0;
-  if (cb_token && !cb_token.includes('***')) body.callback_token = cb_token;
-  if (cb_aes_key && !cb_aes_key.includes('***')) body.callback_aes_key = cb_aes_key;
-  _setSettingsActionLoading('wecom', true);
-  try {
-    const r = await fetch('/vizo/console/api/settings/wecom', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
-    const d = await r.json();
-    if (d.success) {
-      showToast('企微配置已保存，重启后生效', 'success');
-      document.getElementById('wecom-secret').value = '';
-      document.getElementById('wecom-cb-token').value = '';
-      document.getElementById('wecom-cb-aeskey').value = '';
-      await loadWecomStatus();
-    } else { showToast(d.error || '保存失败', 'error'); }
-  } catch(e) { showToast('网络错误', 'error'); }
-  finally { _setSettingsActionLoading('wecom', false); }
 }
 
 // ======================== Project Manager ========================
@@ -12802,19 +12615,9 @@ class WebConsoleHandler:
         from lib.preview_server import get_base_url
         cfg = load_config()
         custom_domain = cfg.get("custom_domain", "")
-        # 检查企微是否配置完整
-        wecom = cfg.get("wecom", {})
-        cb = wecom.get("callback_server", {})
-        has_wecom = bool(wecom.get("enabled")) and wecom.get("corp_id") and wecom.get("corp_secret")
-        has_callback = bool(cb.get("token")) and bool(cb.get("encoding_aes_key"))
-        callback_url = ""
-        if custom_domain and has_wecom and has_callback:
-            callback_url = f"https://{custom_domain}/wecom/callback"
         return web.json_response({
             "custom_domain": custom_domain,
             "effective_url": get_base_url(),
-            "has_wecom_config": has_wecom and has_callback,
-            "callback_url": callback_url,
         })
 
     async def handle_settings_domain_post(self, request):
@@ -12851,103 +12654,6 @@ class WebConsoleHandler:
             "success": True,
             "effective_url": get_base_url(),
         })
-
-    # -------------------- WeCom Settings --------------------
-
-    async def handle_settings_wecom_get(self, request):
-        """GET /vizo/console/api/settings/wecom — 读取企微配置状态"""
-        if not self._check_auth(request):
-            return web.json_response({"error": "未授权"}, status=401)
-        from lib.config_loader import load_config, is_placeholder
-        cfg = load_config()
-        wecom = cfg.get("wecom", {})
-        cb = wecom.get("callback_server", {})
-        corp_secret = wecom.get("corp_secret", "")
-        cb_token = cb.get("token", "")
-        cb_aes_key = cb.get("encoding_aes_key", "")
-        custom_domain = cfg.get("custom_domain", "")
-        callback_url = ""
-        if custom_domain:
-            callback_url = f"https://{custom_domain}/wecom/callback"
-        def _mask(val):
-            """脱敏：保留前5后3字符，中间用***"""
-            if not val or len(val) <= 8:
-                return val
-            return val[:5] + "***" + val[-3:]
-        # 获取出口 IP（TTL 缓存，每 10 分钟刷新）
-        import time as _time
-        _ip_cache = getattr(self, '_cached_outgoing_ip', None)
-        _IP_TTL = 600  # 10 minutes
-        outgoing_ip = None
-        if _ip_cache:
-            cached_ip, cached_ts = _ip_cache
-            if _time.time() - cached_ts < _IP_TTL:
-                outgoing_ip = cached_ip
-        if not outgoing_ip:
-            import urllib.request
-            for svc in ("https://api4.ipify.org", "https://ipv4.icanhazip.com", "https://4.ipinfo.io/ip"):
-                try:
-                    req = urllib.request.Request(svc, headers={"User-Agent": "curl/8.0"})
-                    with urllib.request.urlopen(req, timeout=5) as resp:
-                        outgoing_ip = resp.read().decode().strip()
-                        if outgoing_ip:
-                            self._cached_outgoing_ip = (outgoing_ip, _time.time())
-                            break
-                except Exception:
-                    continue
-            if not outgoing_ip:
-                outgoing_ip = ""
-        return web.json_response({
-            "enabled": bool(wecom.get("enabled", False)),
-            "corp_id": wecom.get("corp_id", "") if not is_placeholder(wecom.get("corp_id", "")) else "",
-            "has_secret": bool(corp_secret) and not is_placeholder(corp_secret),
-            "secret_masked": _mask(corp_secret) if corp_secret and not is_placeholder(corp_secret) else "",
-            "agent_id": wecom.get("agent_id", 0),
-            "has_callback_token": bool(cb_token) and not is_placeholder(cb_token),
-            "callback_token_masked": _mask(cb_token) if cb_token and not is_placeholder(cb_token) else "",
-            "has_callback_aes_key": bool(cb_aes_key) and not is_placeholder(cb_aes_key),
-            "callback_aes_key_masked": _mask(cb_aes_key) if cb_aes_key and not is_placeholder(cb_aes_key) else "",
-            "custom_domain": custom_domain,
-            "callback_url": callback_url,
-            "outgoing_ip": outgoing_ip,
-        })
-
-    async def handle_settings_wecom_post(self, request):
-        """POST /vizo/console/api/settings/wecom — 修改企微配置"""
-        if not self._check_auth(request):
-            return web.json_response({"error": "未授权"}, status=401)
-        try:
-            data = await request.json()
-        except Exception:
-            return web.json_response({"error": "请求格式错误"}, status=400)
-
-        import json as _json
-        from lib.config_loader import load_config, _deep_set
-        from lib.paths import CONFIG_FILE
-
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config_data = _json.load(f)
-
-        # enabled 字段始终写入
-        _deep_set(config_data, ("wecom", "enabled"), bool(data.get("enabled", False)))
-
-        # 其余字段：有值才覆盖，空值跳过不覆盖
-        if data.get("corp_id"):
-            _deep_set(config_data, ("wecom", "corp_id"), data["corp_id"].strip())
-        if data.get("corp_secret"):
-            _deep_set(config_data, ("wecom", "corp_secret"), data["corp_secret"].strip())
-        if data.get("agent_id"):
-            _deep_set(config_data, ("wecom", "agent_id"), int(data["agent_id"]))
-        if data.get("callback_token"):
-            _deep_set(config_data, ("wecom", "callback_server", "token"), data["callback_token"].strip())
-        if data.get("callback_aes_key"):
-            _deep_set(config_data, ("wecom", "callback_server", "encoding_aes_key"), data["callback_aes_key"].strip())
-
-        with open(str(CONFIG_FILE), 'w', encoding='utf-8') as f:
-            _json.dump(config_data, f, indent=2, ensure_ascii=False)
-            f.write('\n')
-        load_config(force_reload=True)
-        return web.json_response({"success": True})
 
     # -------------------- Console SPA --------------------
 

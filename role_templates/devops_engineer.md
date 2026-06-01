@@ -12,7 +12,7 @@ Vizo 是一个 Python CLI 多代理编排系统，部署在 Linux 服务器上�
 
 | 服务                       | 管理方式           | 说明                                      |
 | ------------------------ | -------------- | --------------------------------------- |
-| `vizo-secretary.service` | systemd --user | 24/7 秘书进程，监听企微消息自动派发任务                  |
+| `vizo-secretary.service` | systemd --user | 24/7 秘书进程，管理控制台与确认服务生命周期                  |
 | `cloudflared.service`    | systemd --user | Cloudflare Tunnel，暴露 opus.bingbing.asia |
 | `confirm_server.py`      | secretary 子进程  | 确认请求 HTTP 服务（端口 9380），随 secretary 启动    |
 

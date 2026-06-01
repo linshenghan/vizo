@@ -25,7 +25,7 @@ def write_signal(task_id: str, action: str, source: str = "cli", **kwargs) -> st
     Args:
         task_id: 目标任务 ID
         action: 控制动作（pause / rollback / terminate）
-        source: 信号来源（cli / wecom / web）
+        source: 信号来源（cli / web）
         **kwargs: 附加参数（target_step, feedback, rollback 等）
 
     Returns:

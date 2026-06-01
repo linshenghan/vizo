@@ -25,7 +25,6 @@ state_manager.py
 stream_renderer.py
 user_interface.py
 vizo.py
-wecom_callback.py
 lib/*.py
 lib/runtime/*.py
 lib/runtime/sessions/*.py
@@ -55,9 +54,8 @@ role_templates/**
 agents/_builtin/**
 docker/**
 
-docs/SECRETARY_DEBUG.md
-docs/SECRETARY_QUICKSTART.md
 docs/DOC_SERVER_DEPLOYMENT.md
+docs/DEPLOYMENT.md
 docs/opus系统 CLI兼容方案.md
 
 PUBLIC_SYNC_MANIFEST.txt

@@ -6,8 +6,7 @@ Opus 智能协作系统 v3.0
 此服务作为后台守护进程运行，功能：
 1. 监听 Redis 中的新任务提交
 2. 收到任务后，写入待执行队列
-3. 发送企微通知提醒用户回终端查看
-4. 用户启动 claude 时，session_start hook 自动读取待执行任务
+3. 用户启动 claude 时，session_start hook 自动读取待执行任务
 
 使用:
     python3 task_monitor.py start       # 后台启动
@@ -101,9 +100,6 @@ class TaskMonitor:
                         # 保存为待执行任务
                         await self.save_pending_task(project, task_content)
                         
-                        # 发送通知提醒用户
-                        await self.notify_user(project, task_content)
-
                 await asyncio.sleep(2)
 
             except asyncio.CancelledError:
@@ -129,33 +125,6 @@ class TaskMonitor:
         # 设置过期时间（7天）
         await r.expire(f"pending_tasks:{project}", 86400 * 7)
         log(f"任务已保存到队列: pending_tasks:{project}")
-
-    async def notify_user(self, project: str, task: str):
-        """发送通知提醒用户"""
-        try:
-            sys.path.insert(0, os.path.dirname(CONFIG_PATH))
-            
-            with open(CONFIG_PATH) as f:
-                config = json.load(f)
-            
-            from wecom_notifier import WeComNotifier
-            secrets = config.get("secrets", {})
-            wecom = WeComNotifier(
-                secrets.get("wecom_corpid", ""),
-                secrets.get("wecom_agentid", ""),
-                secrets.get("wecom_secret", ""),
-                secrets.get("wecom_userid", "")
-            )
-            
-            await wecom.send_text(
-                f"📥 收到新任务 [{project}]\n\n"
-                f"任务: {task[:200]}...\n\n"
-                f"请回到终端，Claude Code 会自动读取并执行。\n"
-                f"如终端已关闭，请运行 'claude' 启动新会话。"
-            )
-            log("已发送提醒通知")
-        except Exception as e:
-            log(f"发送通知失败: {e}")
 
     def stop(self):
         self._running = False

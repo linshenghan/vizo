@@ -58,35 +58,6 @@ def _expire_request(req_file, data):
     except OSError:
         pass
 
-
-
-def _deregister_session():
-    """注销当前会话的注册信息"""
-    try:
-        import redis as sync_redis
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'lib'))
-        from session_utils import get_session_project
-        r = sync_redis.Redis(host="127.0.0.1", port=6380,
-                             decode_responses=True,
-                             socket_timeout=1, socket_connect_timeout=1)
-        claude_pid = os.getppid()
-        project_name = get_session_project(os.getcwd())
-        session_id = f"{project_name}:{claude_pid}"
-
-        # 删除会话注册
-        r.delete(f"claude_session:{session_id}")
-        # 删除 per-session 消息队列
-        r.delete(f"wecom_session:{session_id}")
-        # 如果是默认会话，清除默认
-        default = r.get("wecom_default_session")
-        if default == session_id:
-            r.delete("wecom_default_session")
-
-        r.close()
-    except Exception:
-        pass
-
-
 def _collect_pending(task_id_filter=None):
     """收集待确认请求。task_id_filter 非空时只返回匹配该任务的请求。"""
     if not CONFIRM_DIR.exists():
@@ -215,8 +186,6 @@ def main():
     pending = _collect_pending(task_id_filter=task_filter)
 
     if not pending:
-        if not agent_role:
-            _deregister_session()
         print(json.dumps({}))
         return
 

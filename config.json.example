@@ -63,24 +63,9 @@
     "cache_ttl": 3600,
     "memory_ttl": 86400
   },
-  "wecom": {
-    "enabled": false,
-    "corp_id": "your-corp-id",
-    "corp_secret": "your-corp-secret（或通过 WECOM_CORP_SECRET 环境变量注入）",
-    "agent_id": 1000002,
-    "callback_server": {
-      "url": "https://your-domain.example.com/wecom/callback",
-      "token": "your-callback-token",
-      "encoding_aes_key": "your-encoding-aes-key"
-    }
-  },
   "secrets": {
     "wxpusher_app_token": "your-wxpusher-token",
     "wxpusher_uid": "your-wxpusher-uid",
-    "wecom_corpid": "your-corp-id",
-    "wecom_agentid": "1000002",
-    "wecom_secret": "your-wecom-secret",
-    "wecom_userid": "your-userid",
     "modelscope_api_key": "your-modelscope-api-key",
     "github_token": "your-github-token"
   },
@@ -109,14 +94,5 @@
     },
     "health_check_interval": 30,
     "auto_switch_on_failure": true
-  },
-  "wecom_callback": {
-    "token": "your-wecom-callback-token",
-    "encoding_aes_key": "your-wecom-encoding-aes-key"
-  },
-  "wecom_bot_callback": {
-    "_comment": "智能机器人回调配置（安全与管理-管理工具中创建的机器人）",
-    "token": "your-bot-callback-token",
-    "encoding_aes_key": "your-bot-encoding-aes-key"
   }
 }

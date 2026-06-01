@@ -12,8 +12,6 @@ Opus 智能协作系统 v3.0
 """
 
 import os
-import json
-import asyncio
 from typing import Optional, Dict, List, TYPE_CHECKING
 from datetime import datetime
 from pathlib import Path
@@ -32,35 +30,6 @@ else:
 class MemorySystem:
     """Stub - v2.5 已删除，改用 Serena MCP"""
     pass
-from .wecom_notifier import WeComNotifier
-
-
-# ==================== 企微通知 ====================
-
-def get_wecom_notifier() -> Optional[WeComNotifier]:
-    """获取企业微信通知器"""
-    try:
-        config_path = str(_PROJECT_ROOT / 'config.json')
-        with open(config_path) as f:
-            config = json.load(f)
-
-        secrets = config.get("secrets", {})
-        if all([
-            secrets.get("wecom_corpid"),
-            secrets.get("wecom_agentid"),
-            secrets.get("wecom_secret"),
-            secrets.get("wecom_userid")
-        ]):
-            return WeComNotifier(
-                corpid=secrets["wecom_corpid"],
-                agentid=secrets["wecom_agentid"],
-                secret=secrets["wecom_secret"],
-                userid=secrets["wecom_userid"]
-            )
-    except Exception as e:
-        print(f"[警告] 企微通知初始化失败: {e}")
-
-    return None
 
 
 class ProjectSession:
@@ -125,42 +94,8 @@ class ProjectSession:
         return self
 
     def notify(self, message: str, event_type: str = "info") -> "ProjectSession":
-        """
-        发送通知
-
-        Args:
-            message: 通知消息
-            event_type: 事件类型 (info/success/error/warning)
-
-        Returns:
-            self (支持链式调用)
-        """
-        try:
-            asyncio.create_task(self._send_notification(message, event_type))
-        except RuntimeError:
-            pass
-
+        """兼容旧链式调用；项目会话通知已移除。"""
         return self
-
-    async def _send_notification(self, message: str, event_type: str = "info"):
-        """异步发送通知"""
-        notifier = get_wecom_notifier()
-        if not notifier:
-            return
-
-        try:
-            emoji_map = {
-                "info": "ℹ️",
-                "success": "✅",
-                "error": "❌",
-                "warning": "⚠️"
-            }
-            emoji = emoji_map.get(event_type, "")
-            full_message = f"{emoji} [{self.project}] {message}"
-            await notifier.send_text(full_message)
-            await notifier.close()
-        except Exception as e:
-            print(f"[警告] 通知发送失败: {e}")
 
     # ==================== 模型调用 API ====================
 
@@ -224,32 +159,7 @@ class ProjectSession:
         # memory_system 已删除，无法保存会话
         file_path = ""
 
-        # 异步发送企微通知
-        try:
-            asyncio.create_task(self._notify_session_end(summary))
-        except RuntimeError:
-            # 如果没有事件循环，则在后台启动一个
-            pass
-
         return file_path
-
-    async def _notify_session_end(self, summary: str):
-        """异步发送会话结束通知"""
-        notifier = get_wecom_notifier()
-        if not notifier:
-            return
-
-        try:
-            message = (
-                f"✅ 项目会话已完成\n\n"
-                f"项目: {self.project}\n"
-                f"总结: {summary}\n"
-                f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-            await notifier.send_text(message)
-            await notifier.close()
-        except Exception as e:
-            print(f"[警告] 企微通知发送失败: {e}")
 
     def _generate_auto_summary(self) -> str:
         """生成自动总结"""
@@ -562,7 +472,6 @@ KNOWN_PROJECTS = {
         "keywords": [
             "vizo", "维造", "协作系统", "多模型协同",
             "orchestrator", "secretary",
-            "企微", "wecom",
             "记忆系统", "project_session"
         ],
         "paths": [

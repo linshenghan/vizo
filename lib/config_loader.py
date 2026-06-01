@@ -100,7 +100,6 @@ ENV_VAR_MAPPING = {
     "GLM_API_KEY":         (("external_models", "glm", "api_key"), str),
     "QWEN_API_KEY":        (("external_models", "qwen", "api_key"), str),
     "WEB_CONSOLE_TOKEN":   (("web_console", "token"), str),
-    "WECOM_ENABLED":       (("wecom", "enabled"), lambda v: v.lower() == "true"),
     "REDIS_HOST":          (("redis", "host"), str),
     "REDIS_PORT":          (("redis", "port"), int),
     "CONFIRM_SERVER_HOST": (("confirm_server", "host"), str),
@@ -109,19 +108,10 @@ ENV_VAR_MAPPING = {
         ("confirm_server", "use_cloudflare_tunnel"),
         lambda v: v.lower() == "true",
     ),
-    # --- 企微核心配置 ---
-    "WECOM_CORP_ID":           (("wecom", "corp_id"), str),
-    "WECOM_CORP_SECRET":       (("wecom", "corp_secret"), str),
-    "WECOM_AGENT_ID":          (("wecom", "agent_id"), int),
-    "WECOM_CALLBACK_TOKEN":    (("wecom_callback", "token"), str),
-    "WECOM_CALLBACK_AES_KEY":  (("wecom_callback", "encoding_aes_key"), str),
     # --- secrets ---
     "WXPUSHER_APP_TOKEN":      (("secrets", "wxpusher_app_token"), str),
     "MODELSCOPE_API_KEY":      (("secrets", "modelscope_api_key"), str),
     "GITHUB_TOKEN":            (("secrets", "github_token"), str),
-    # --- Bot 回调 ---
-    "BOT_CALLBACK_TOKEN":      (("wecom_bot_callback", "token"), str),
-    "BOT_CALLBACK_AES_KEY":    (("wecom_bot_callback", "encoding_aes_key"), str),
 }
 
 
@@ -239,11 +229,6 @@ def get_redis_config():
 def get_secrets():
     """返回 config["secrets"]，默认 {}"""
     return load_config().get('secrets', {})
-
-
-def get_wecom_config():
-    """返回 config["wecom"]，默认 {}"""
-    return load_config().get('wecom', {})
 
 
 def is_placeholder(value) -> bool:

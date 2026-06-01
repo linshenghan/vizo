@@ -95,7 +95,6 @@ def test_public_manifest_uses_explicit_root_entrypoints():
         "stream_renderer.py",
         "user_interface.py",
         "vizo.py",
-        "wecom_callback.py",
     }
     assert expected_root_entrypoints.issubset(set(manifest_lines))
 

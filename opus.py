@@ -130,9 +130,6 @@ def parse_args():
     parser.add_argument("--history", action="store_true", help="查看任务历史")
     parser.add_argument("--cost", action="store_true", help="查看今日花费")
     parser.add_argument("--task", type=str, nargs="?", const="__list__", help="查看任务（无参数列表，指定ID看详情）")
-    parser.add_argument("--wecom", action="store_true", help="启用企微远程模式")
-    parser.add_argument("--serve", action="store_true", help="启动企微 Callback Server")
-    parser.add_argument("--port", type=int, default=9390, help="Callback Server 端口（默认 9390）")
     parser.add_argument("--project", type=str, help="指定项目（覆盖默认项目）")
     parser.add_argument("--config", type=str, default="config.json", help="配置文件路径")
     parser.add_argument("--stream", type=str, nargs="?", const="__latest__", help="实时查看子代理工作画面（无参数=最新任务）")
@@ -1122,7 +1119,7 @@ def main():
 
     # 没有任何参数时显示帮助
     if not args.requirement and not args.resume and not args.chat \
-       and not args.history and not args.cost and not args.serve \
+       and not args.history and not args.cost \
        and args.task is None and args.stream is None and args.replay is None \
        and args.pause is None and args.rollback is None and args.terminate is None:
         print(CLI_SYSTEM_TITLE)
@@ -1140,9 +1137,6 @@ def main():
         current_project = orch.config.get('default_project', '')
         if args.verbose and current_project:
             logging.getLogger(__name__).debug(f"当前项目: {current_project}")
-
-        if args.wecom:
-            orch.ui.mode = "wecom"
 
         if args.auto_confirm:
             if not args.resume:
@@ -1386,11 +1380,6 @@ def main():
                 asyncio.run(hub.execute(resume=True, task_id=args.task_id))
             else:
                 asyncio.run(orch.resume_last_task(args.task_id))
-        elif args.serve:
-            from orchestrator import load_config
-            from wecom_callback import run_server
-            config = load_config(args.config)
-            run_server(config, port=args.port)
         elif args.chat:
             asyncio.run(orch.quick_chat(args.chat))
         elif args.task is not None:

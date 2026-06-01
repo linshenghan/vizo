@@ -65,7 +65,6 @@ def test_upload_preview_writes_backup_and_returns_link_when_redis_fails(tmp_path
 
     ui = UserInterface({
         "preview_redis_url": "redis://127.0.0.1:1",
-        "wecom": {"callback_server": {"url": "http://127.0.0.1:9390/wecom/callback"}},
     })
 
     link = asyncio.run(ui._upload_preview(preview_file))

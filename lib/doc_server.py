@@ -2,7 +2,7 @@
 """
 文档服务器 - 提供测试生成的JSON文档访问
 支持 /docs/{task_id}/{document}.json 端点
-支持 CORS 跨域访问，用于企业微信中的链接
+支持 CORS 跨域访问
 """
 
 import json

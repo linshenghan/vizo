@@ -98,24 +98,6 @@ def load_state() -> dict:
     return {}
 
 
-def notify_wecom(title: str, message: str):
-    """发送企微通知"""
-    try:
-        r = get_redis()
-        webhook_url = r.get('wecom:webhook_url')
-        if webhook_url:
-            import requests
-            msg = {
-                "msgtype": "text",
-                "text": {
-                    "content": f"🔄 {title}\n\n{message}"
-                }
-            }
-            requests.post(webhook_url, json=msg, timeout=5)
-    except Exception as e:
-        log(f"企微通知失败: {e}")
-
-
 def get_latest_session_id() -> str:
     """获取最新的会话 ID"""
     claude_projects = Path.home() / '.claude/projects'
@@ -207,11 +189,7 @@ def resume_session(session_id: str) -> bool:
         cmd = f"claude --resume {session_id}"
         log(f"恢复命令: {cmd}")
 
-        # 发送通知
-        notify_wecom(
-            "会话恢复就绪",
-            f"API 恢复正常\n\n请在终端执行：\n{cmd}"
-        )
+        log(f"API 恢复正常，请在终端执行：{cmd}")
 
         return True
     except Exception as e:
@@ -235,9 +213,9 @@ def wait_for_api_recovery():
     }
     save_state(state)
 
-    notify_wecom(
-        "API Overload 检测",
-        f"开始自动重试，最长持续 2 小时\n开始时间: {start_time.strftime('%H:%M:%S')}\n结束时间: {end_time.strftime('%H:%M:%S')}"
+    log(
+        "API Overload 检测，开始自动重试，最长持续 2 小时 "
+        f"({start_time.strftime('%H:%M:%S')} - {end_time.strftime('%H:%M:%S')})"
     )
 
     while datetime.now() < end_time:
@@ -259,7 +237,7 @@ def wait_for_api_recovery():
             if session_id:
                 resume_session(session_id)
             else:
-                notify_wecom("API 恢复正常", "API 已恢复，可以开始新会话")
+                log("API 已恢复，可以开始新会话")
 
             return True
 
@@ -279,10 +257,7 @@ def wait_for_api_recovery():
     state["status"] = "timeout"
     save_state(state)
 
-    notify_wecom(
-        "重试超时",
-        "已持续重试 2 小时，API 仍不可用\n请手动检查或稍后重试"
-    )
+    log("已持续重试 2 小时，API 仍不可用，请手动检查或稍后重试")
 
     return False
 

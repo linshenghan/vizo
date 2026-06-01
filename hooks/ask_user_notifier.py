@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse hook - AskUserQuestion 通知
 
-当 Claude Code 使用 AskUserQuestion 工具时，发送企微通知并附带交互链接。
+当 Claude Code 使用 AskUserQuestion 工具时，发送通知并附带交互链接。
 用户可以在手机上直接选择选项或输入自定义回复。
 """
 
