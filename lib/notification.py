@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""
-通知系统 - 微信公众号推送
-Opus 智能协作系统 v3.0
-"""
+"""通知与确认请求管理。"""
 
 import json
 import uuid
 import asyncio
-import aiohttp
-from typing import Optional, Dict, Callable
+from typing import Optional, Dict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -36,168 +32,11 @@ class NotificationType(Enum):
     ERROR_CRITICAL = "error_critical"    # 严重错误
 
 
-class WxPusherNotifier:
-    """WxPusher 微信推送"""
-
-    API_BASE = "https://wxpusher.zjiecode.com/api"
-
-    def __init__(self, app_token: str, uid: str):
-        self.app_token = app_token
-        self.uid = uid
-        self._session: Optional[aiohttp.ClientSession] = None
-
-    async def _get_session(self) -> aiohttp.ClientSession:
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
-        return self._session
-
-    async def close(self):
-        if self._session and not self._session.closed:
-            await self._session.close()
-
-    async def send_message(
-        self,
-        content: str,
-        summary: str = "",
-        content_type: int = 1,
-        url: str = ""
-    ) -> Dict:
-        """
-        发送消息
-
-        Args:
-            content: 消息内容
-            summary: 摘要（显示在通知栏）
-            content_type: 1=文本, 2=HTML, 3=Markdown
-            url: 点击跳转链接
-
-        Returns:
-            API 响应
-        """
-        session = await self._get_session()
-
-        data = {
-            "appToken": self.app_token,
-            "content": content,
-            "summary": summary or content[:50],
-            "contentType": content_type,
-            "uids": [self.uid]
-        }
-        if url:
-            data["url"] = url
-
-        try:
-            async with session.post(
-                f"{self.API_BASE}/send/message",
-                json=data,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                result = await resp.json()
-                return result
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-    async def send_notification(
-        self,
-        notification_type: "NotificationType",
-        title: str,
-        content: str,
-        request_id: str = "",
-        options: list = None
-    ) -> Dict:
-        """
-        发送结构化通知
-
-        Args:
-            notification_type: 通知类型
-            title: 标题
-            content: 内容
-            request_id: 请求ID（用于等待响应）
-            options: 可选项列表（用于选择）
-
-        Returns:
-            包含 request_id 的响应
-        """
-        request_id = request_id or str(uuid.uuid4())[:8]
-
-        # 构建消息
-        emoji_map = {
-            NotificationType.AUTH_REQUIRED: "🔐",
-            NotificationType.CONFIRM_NEEDED: "⚠️",
-            NotificationType.INFO_SUPPLEMENT: "📝",
-            NotificationType.TASK_PAUSED: "⏸️",
-            NotificationType.TASK_COMPLETED: "✅",
-            NotificationType.PROGRESS_REPORT: "📊",
-            NotificationType.ERROR_CRITICAL: "❌"
-        }
-
-        emoji = emoji_map.get(notification_type, "📢")
-        message = f"{emoji} **{title}**\n\n{content}"
-
-        # 对确认类通知，尝试生成 Web 确认链接
-        confirm_url = None
-        if notification_type in [
-            NotificationType.AUTH_REQUIRED,
-            NotificationType.CONFIRM_NEEDED,
-        ]:
-            confirm_url = await get_confirm_url(request_id)
-            if confirm_url:
-                message += f"\n\n---\n🔗 **[点击确认/取消]({confirm_url})**\n"
-                message += f"\n请求ID: `{request_id}`"
-            else:
-                message += f"\n\n---\n请求ID: `{request_id}`\n"
-                if options:
-                    message += "\n可选回复:\n"
-                    for i, opt in enumerate(options, 1):
-                        message += f"  {i}. {opt}\n"
-                message += f"\n回复方式: `opus3-reply {request_id} Y/N`"
-        elif notification_type == NotificationType.INFO_SUPPLEMENT:
-            message += f"\n\n---\n请求ID: `{request_id}`\n"
-            if options:
-                message += "\n可选回复:\n"
-                for i, opt in enumerate(options, 1):
-                    message += f"  {i}. {opt}\n"
-            message += f"\n回复方式: `opus3-reply {request_id} 你的回复`"
-
-        message += f"\n\n_时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}_"
-
-        result = await self.send_message(
-            content=message,
-            summary=f"{emoji} {title}",
-            content_type=3,  # Markdown
-            url=confirm_url or ""
-        )
-
-        result["request_id"] = request_id
-        return result
-
-
 class NotificationManager:
-    """通知管理器（支持 WxPusher 和控制台降级）"""
+    """通知管理器。"""
 
     def __init__(self, config: Dict):
         self.config = config
-        self._wxpusher: Optional[WxPusherNotifier] = None
-        self._response_callbacks: Dict[str, Callable] = {}
-
-    def _load_wxpusher(self) -> Optional[WxPusherNotifier]:
-        """加载 WxPusher 通知器"""
-        if self._wxpusher:
-            return self._wxpusher
-
-        secrets = self.config.get("secrets", {})
-        app_token = secrets.get("wxpusher_app_token", "")
-        uid = secrets.get("wxpusher_uid", "")
-
-        if not app_token or not uid or app_token.startswith("YOUR_"):
-            return None
-
-        self._wxpusher = WxPusherNotifier(app_token, uid)
-        return self._wxpusher
-
-    def _load_notifier(self):
-        """加载当前通知器（兼容旧代码）"""
-        return self._load_wxpusher()
 
     async def notify(
         self,
@@ -210,7 +49,7 @@ class NotificationManager:
         extra_data: dict = None
     ) -> Optional[str]:
         """
-        发送通知（优先使用 WxPusher，不可用时降级到控制台）
+        记录通知；交互类请求通过 Redis 等待 Web 确认页响应。
         
         Args:
             notification_type: 通知类型
@@ -227,22 +66,6 @@ class NotificationManager:
         if not events_config.get(type_key, True):
             return None
 
-        notifier = self._load_notifier()
-        if not notifier:
-            # 通知不可用时，打印到控制台
-            print(f"\n{'='*60}")
-            print(f"[通知] {title}")
-            print(f"{content}")
-            if wait_response:
-                print(f"\n请在控制台输入响应:")
-                try:
-                    return input("> ").strip()
-                except:
-                    return None
-            print(f"{'='*60}\n")
-            return None
-
-        # 生成 request_id
         request_id = str(uuid.uuid4())[:8]
 
         # 对于需要交互的通知类型，先注册 pending_request
@@ -274,17 +97,13 @@ class NotificationManager:
             except Exception as e:
                 print(f"[NotificationManager] 注册 pending_request 失败: {e}")
 
-        result = await notifier.send_notification(
-            notification_type=notification_type,
-            title=title,
-            content=content,
-            request_id=request_id,
-            options=options
-        )
-
-        if not result.get("success", False) and "error" in result:
-            print(f"[NotificationManager] 发送失败: {result.get('error')}")
-            return None
+        print(f"\n{'='*60}")
+        print(f"[通知] {title}")
+        print(f"{content}")
+        confirm_url = await get_confirm_url(request_id)
+        if confirm_url and needs_interaction:
+            print(f"确认链接: {confirm_url}")
+        print(f"{'='*60}\n")
 
         if not wait_response:
             return None
@@ -333,35 +152,22 @@ class NotificationManager:
                 await asyncio.sleep(2)
                 elapsed += 2
 
-                # 超时一半时发送提醒
                 if not reminder_sent and elapsed >= timeout // 2:
                     reminder_sent = True
-                    notifier = self._load_notifier()
-                    if notifier:
-                        # 尝试获取确认链接
-                        confirm_url = await get_confirm_url(request_id)
-                        if confirm_url:
-                            reply_hint = f"点击确认/取消: {confirm_url}"
-                        else:
-                            reply_hint = f"回复方式: opus3-reply {request_id} Y/N"
-
-                        await notifier.send_message(
-                            f"⏰ **提醒**\n\n请求 `{request_id}` 等待回复中...\n\n"
-                            f"剩余时间: {(timeout - elapsed) // 60} 分钟\n\n"
-                            f"{reply_hint}",
-                            summary=f"⏰ 请求 {request_id} 等待回复",
-                            content_type=3,
-                            url=confirm_url or ""
+                    confirm_url = await get_confirm_url(request_id)
+                    if confirm_url:
+                        print(
+                            f"[NotificationManager] 请求 {request_id} 等待回复中，"
+                            f"剩余 {(timeout - elapsed) // 60} 分钟，确认链接: {confirm_url}"
+                        )
+                    else:
+                        print(
+                            f"[NotificationManager] 请求 {request_id} 等待回复中，"
+                            f"剩余 {(timeout - elapsed) // 60} 分钟"
                         )
 
             # 超时，不删除 pending_request（让它自然过期，用户还能看到页面）
-            notifier = self._load_notifier()
-            if notifier:
-                await notifier.send_message(
-                    f"⌛ **请求超时**\n\n请求 `{request_id}` 已超时（{timeout}秒）\n\n任务将暂停等待下次交互",
-                    summary=f"⌛ 请求 {request_id} 超时",
-                    content_type=3
-                )
+            print(f"[NotificationManager] 请求 {request_id} 已超时（{timeout}秒）")
             return None
 
         except Exception as e:

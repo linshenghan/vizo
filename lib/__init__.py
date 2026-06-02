@@ -50,7 +50,6 @@ def save_session(*args, **kwargs):
 
 from .notification import (
     NotificationManager,
-    WxPusherNotifier,
     get_notification_manager,
     NotificationType
 )
@@ -104,7 +103,6 @@ __all__ = [
 
     # Notification
     "NotificationManager",
-    "WxPusherNotifier",
     "get_notification_manager",
     "NotificationType",
 

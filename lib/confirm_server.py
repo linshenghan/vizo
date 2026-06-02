@@ -3,8 +3,8 @@
 Web 确认服务 - 轻量级 aiohttp 服务器
 Vizo 智能协作系统
 
-用途：为 WxPusher 微信通知提供 Web 确认页面
-用户点击微信中的链接即可确认/取消高风险操作
+用途：提供 Web 确认页面
+用户点击链接即可确认/取消高风险操作
 
 使用:
     python3 confirm_server.py start       # 后台启动
@@ -1176,19 +1176,6 @@ class ConfirmServer:
                 await redis.aclose()
             except Exception:
                 pass
-
-    async def handle_wechat_verify(self, request: web.Request) -> web.Response:
-        """GET /{filename}.txt - 微信域名验证文件"""
-        filename = request.match_info["filename"]
-        r = await self._get_redis()
-
-        # 从 Redis 读取验证内容
-        verify_content = await r.get(f"wechat_verify:{filename}")
-        if verify_content:
-            return web.Response(text=verify_content, content_type="text/plain")
-
-        # 返回 404
-        return web.Response(text="Not Found", status=404)
 
     # ==================== 输入页面处理 ====================
 
@@ -3691,7 +3678,6 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
         _add_post("/vizo/input/{request_id}", self.handle_input_action)
         _add_get("/vizo/preview/{preview_id}", self.handle_preview_page)
         _add_get("/vizo/health", self.handle_health)
-        _add_get("/{filename}.txt", self.handle_wechat_verify)  # 微信域名验证
         # 文档服务
         _add_get("/vizo/docs/", self.handle_list_docs)
         _add_get("/vizo/docs/{task_id}/{document}", self.handle_doc_json)

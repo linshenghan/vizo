@@ -109,7 +109,6 @@ ENV_VAR_MAPPING = {
         lambda v: v.lower() == "true",
     ),
     # --- secrets ---
-    "WXPUSHER_APP_TOKEN":      (("secrets", "wxpusher_app_token"), str),
     "MODELSCOPE_API_KEY":      (("secrets", "modelscope_api_key"), str),
     "GITHUB_TOKEN":            (("secrets", "github_token"), str),
 }
