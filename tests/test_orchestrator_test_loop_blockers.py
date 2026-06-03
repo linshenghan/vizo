@@ -6,9 +6,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from agent_runner import AgentResult
-from orchestrator import Orchestrator
-from state_manager import Task, WorkflowError
+from vizo_core.agent_runner import AgentResult
+from vizo_core.orchestrator import Orchestrator
+from vizo_core.state_manager import Task, WorkflowError
 
 
 class RecordingUI:

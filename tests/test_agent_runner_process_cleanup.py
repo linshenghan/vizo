@@ -1,7 +1,7 @@
 import asyncio
 import signal
 
-from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
 
 
 class _FakeProcess:

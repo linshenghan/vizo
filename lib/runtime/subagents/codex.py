@@ -6,7 +6,7 @@ import logging
 import time
 from pathlib import Path
 
-from agent_runner import (
+from vizo_core.agent_runner import (
     AgentError,
     AgentRateLimitError,
     AgentResult,

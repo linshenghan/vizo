@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_runner import (
+from vizo_core.agent_runner import (
     AgentError,
     AgentRateLimitError,
     AgentSignalInterrupt,

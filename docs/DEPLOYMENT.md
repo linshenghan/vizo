@@ -6,12 +6,12 @@ deployment details belong in this file under `docs/`.
 
 ## Deployment Options
 
-| Option | Use when | Notes |
-| --- | --- | --- |
-| Docker Compose | You want the fastest complete setup. | Recommended for evaluation and single-host deployment. Starts Vizo and Redis. |
-| Local Python process | You are developing Vizo or want direct control over installed runtimes. | Requires Python dependencies, Redis, and AI CLI runtimes on the host. |
-| Reverse proxy | You need HTTPS, a domain name, or remote access. | Put Nginx/Caddy/Traefik in front of the Vizo HTTP service. |
-| systemd or another supervisor | You are running without Docker in production. | Keep `secretary.py` alive; it supervises the Web service. |
+| Option                        | Use when                                                                | Notes                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Docker Compose                | You want the fastest complete setup.                                    | Recommended for evaluation and single-host deployment. Starts Vizo and Redis. |
+| Local Python process          | You are developing Vizo or want direct control over installed runtimes. | Requires Python dependencies, Redis, and AI CLI runtimes on the host.         |
+| Reverse proxy                 | You need HTTPS, a domain name, or remote access.                        | Put Nginx/Caddy/Traefik in front of the Vizo HTTP service.                    |
+| systemd or another supervisor | You are running without Docker in production.                           | Keep `python3 -m vizo_core.secretary` alive; it supervises the Web service.   |
 
 ## Prerequisites
 
@@ -21,7 +21,6 @@ Required for all deployments:
 - Git.
 - A supported Anthropic-compatible API key, usually through `ANTHROPIC_API_KEY`
   or `OPUS_MAIN_API_KEY`.
-- A strong Web Console password or token.
 - Redis reachable by the Vizo process.
 
 Required only for local-process deployments:
@@ -54,24 +53,23 @@ Do not commit the generated `config.json` or `.env`.
 
 Common environment overrides:
 
-| Variable | Maps to |
-| --- | --- |
-| `ANTHROPIC_API_KEY` | `external_models.anthropic.api_key` |
-| `OPUS_MAIN_API_KEY` | `external_models.anthropic.api_key` |
-| `ANTHROPIC_BASE_URL` | `external_models.anthropic.base_url` |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Anthropic Opus model override |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Anthropic Sonnet model override |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Anthropic Haiku model override |
-| `DEEPSEEK_API_KEY` | `external_models.deepseek.api_key` |
-| `GLM_API_KEY` | `external_models.glm.api_key` |
-| `QWEN_API_KEY` | `external_models.qwen.api_key` |
-| `WEB_CONSOLE_TOKEN` | `web_console.token` |
-| `REDIS_HOST` | `redis.host` |
-| `REDIS_PORT` | `redis.port` |
-| `CONFIRM_SERVER_HOST` | `confirm_server.host` |
-| `CONFIRM_SERVER_PORT` | `confirm_server.port` |
-| `CONFIRM_SERVER_USE_TUNNEL` | `confirm_server.use_cloudflare_tunnel` |
-| `PUBLIC_BASE_URL` | public preview-link base URL |
+| Variable                         | Maps to                                |
+| -------------------------------- | -------------------------------------- |
+| `ANTHROPIC_API_KEY`              | `external_models.anthropic.api_key`    |
+| `OPUS_MAIN_API_KEY`              | `external_models.anthropic.api_key`    |
+| `ANTHROPIC_BASE_URL`             | `external_models.anthropic.base_url`   |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL`   | Anthropic Opus model override          |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Anthropic Sonnet model override        |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL`  | Anthropic Haiku model override         |
+| `DEEPSEEK_API_KEY`               | `external_models.deepseek.api_key`     |
+| `GLM_API_KEY`                    | `external_models.glm.api_key`          |
+| `QWEN_API_KEY`                   | `external_models.qwen.api_key`         |
+| `REDIS_HOST`                     | `redis.host`                           |
+| `REDIS_PORT`                     | `redis.port`                           |
+| `CONFIRM_SERVER_HOST`            | `confirm_server.host`                  |
+| `CONFIRM_SERVER_PORT`            | `confirm_server.port`                  |
+| `CONFIRM_SERVER_USE_TUNNEL`      | `confirm_server.use_cloudflare_tunnel` |
+| `PUBLIC_BASE_URL`                | public preview-link base URL           |
 
 Implementation detail: Anthropic-prefixed variables are intentionally read from
 `.env` for the main configuration path so stale shell variables from another AI
@@ -95,7 +93,6 @@ Edit `.env`:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
-VIZO_WEB_CONSOLE_TOKEN=replace-with-a-strong-password
 ```
 
 Optional but recommended when generating links:
@@ -106,11 +103,6 @@ VIZO_PUBLIC_BASE_URL=http://127.0.0.1:9390
 
 Use your real HTTPS URL instead of the local URL when deploying behind a reverse
 proxy.
-
-The public `.env.example` also shows `WEB_CONSOLE_TOKEN`. That variable is used
-by local Python runs. The default Docker Compose file reads
-`VIZO_WEB_CONSOLE_TOKEN` and injects it into the container as
-`WEB_CONSOLE_TOKEN`.
 
 ### 3. Align The Web Port
 
@@ -239,7 +231,6 @@ Edit `.env`:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
-WEB_CONSOLE_TOKEN=replace-with-a-strong-password
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 ```
@@ -260,7 +251,7 @@ Edit `config.json`:
 For a foreground service:
 
 ```bash
-python3 secretary.py
+python3 -m vizo_core.secretary
 ```
 
 For confirm_server only:
@@ -290,7 +281,8 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/vizo-public
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/vizo-public/.venv/bin/python /opt/vizo-public/secretary.py
+WorkingDirectory=/opt/vizo-public
+ExecStart=/opt/vizo-public/.venv/bin/python -m vizo_core.secretary
 Restart=always
 RestartSec=5
 
@@ -312,8 +304,8 @@ Replace `/opt/vizo-public` with your actual checkout path.
 
 ## Reverse Proxy And HTTPS
 
-Do not expose the Web Console over an untrusted network without TLS and a strong
-password.
+Do not expose the Web Console over an untrusted network without TLS and an
+external access-control layer such as a reverse proxy, firewall, or VPN.
 
 Example Nginx server block:
 
@@ -349,18 +341,18 @@ Or set `custom_domain` in `config.json` to `vizo.example.com`.
 
 ## Important Routes
 
-| URL | Purpose |
-| --- | --- |
-| `/vizo/console` | Desktop Web Console. |
-| `/vizo/console/setup` | First-run setup wizard. |
-| `/vizo/m` | Mobile Console. |
-| `/vizo/tasks` | Task list. |
-| `/vizo/confirm/{request_id}` | Human approval page. |
-| `/vizo/input/{request_id}` | Human feedback page. |
-| `/vizo/preview/{preview_id}` | Output preview. |
-| `/vizo/docs/` | Generated document listing. |
-| `/vizo/chrome/connect` | Chrome bridge connection page. |
-| `/vizo/health` | Health check. |
+| URL                          | Purpose                        |
+| ---------------------------- | ------------------------------ |
+| `/vizo/console`              | Desktop Web Console.           |
+| `/vizo/console/setup`        | First-run setup wizard.        |
+| `/vizo/m`                    | Mobile Console.                |
+| `/vizo/tasks`                | Task list.                     |
+| `/vizo/confirm/{request_id}` | Human approval page.           |
+| `/vizo/input/{request_id}`   | Human feedback page.           |
+| `/vizo/preview/{preview_id}` | Output preview.                |
+| `/vizo/docs/`                | Generated document listing.    |
+| `/vizo/chrome/connect`       | Chrome bridge connection page. |
+| `/vizo/health`               | Health check.                  |
 
 ## Health Checks
 
@@ -400,14 +392,14 @@ Run a smoke command:
 
 Common runtime paths:
 
-| Path | Content |
-| --- | --- |
-| `logs/` | Service logs. |
-| `.vizo/` | Vizo runtime state for newer components. |
-| `.opus/` | Historical task/session state path used by compatibility code. |
-| `.mcp.json` | Local MCP server configuration. |
-| `config.json` | Local runtime configuration. |
-| `.env` | Local secret and environment overrides. |
+| Path          | Content                                                        |
+| ------------- | -------------------------------------------------------------- |
+| `logs/`       | Service logs.                                                  |
+| `.vizo/`      | Vizo runtime state for newer components.                       |
+| `.opus/`      | Historical task/session state path used by compatibility code. |
+| `.mcp.json`   | Local MCP server configuration.                                |
+| `config.json` | Local runtime configuration.                                   |
+| `.env`        | Local secret and environment overrides.                        |
 
 Docker Compose persists runtime data in named volumes:
 
@@ -418,8 +410,6 @@ Docker Compose persists runtime data in named volumes:
 
 ## Security Checklist
 
-- Set a strong `WEB_CONSOLE_TOKEN` or initialize a strong password through the
-  setup wizard.
 - Keep `config.json`, `.env`, `.mcp.json`, logs, task state, and local memories
   out of Git.
 - If you build a Docker image on a machine that already has `config.json`, avoid
@@ -463,11 +453,10 @@ Then verify `REDIS_HOST` and `REDIS_PORT` in `.env`.
 
 ### Setup Wizard Keeps Reappearing
 
-The setup wizard appears when Vizo cannot find a usable Web Console password or
-API key. Check:
+The setup wizard appears when Vizo cannot find a usable API key. Check:
 
 ```bash
-grep -E 'WEB_CONSOLE_TOKEN|VIZO_WEB_CONSOLE_TOKEN|ANTHROPIC_API_KEY|OPUS_MAIN_API_KEY' .env
+grep -E 'ANTHROPIC_API_KEY|OPUS_MAIN_API_KEY' .env
 ```
 
 Also confirm that persistent volumes were not removed with `docker compose down

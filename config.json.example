@@ -48,11 +48,9 @@
   },
   "web_console": {
     "enabled": true,
-    "token": "your-password-here",
     "max_sessions": 3,
     "idle_timeout_suspend": 1800,
-    "idle_timeout_terminate": 7200,
-    "cookie_max_age_days": 30
+    "idle_timeout_terminate": 7200
   },
   "redis": {
     "host": "127.0.0.1",

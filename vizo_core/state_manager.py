@@ -56,7 +56,7 @@ def check_task_code_changes(state: dict, project_path: str = None) -> bool:
         project_name = state.get("project", "")
         if project_name:
             try:
-                _root = Path(__file__).resolve().parent
+                _root = Path(__file__).resolve().parents[1]
                 cfg = json.loads((_root / "config.json").read_text("utf-8"))
                 project_path = cfg.get("projects", {}).get(project_name, {}).get("path", ".")
             except Exception:

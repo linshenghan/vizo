@@ -99,7 +99,6 @@ ENV_VAR_MAPPING = {
     "DEEPSEEK_API_KEY":    (("external_models", "deepseek", "api_key"), str),
     "GLM_API_KEY":         (("external_models", "glm", "api_key"), str),
     "QWEN_API_KEY":        (("external_models", "qwen", "api_key"), str),
-    "WEB_CONSOLE_TOKEN":   (("web_console", "token"), str),
     "REDIS_HOST":          (("redis", "host"), str),
     "REDIS_PORT":          (("redis", "port"), int),
     "CONFIRM_SERVER_HOST": (("confirm_server", "host"), str),

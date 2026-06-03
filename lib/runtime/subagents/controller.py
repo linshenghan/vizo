@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_runner import AgentError
+from vizo_core.agent_runner import AgentError
 
 from ..contracts import (
     RUNTIME_FAMILY_CODEX,

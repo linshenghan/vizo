@@ -1,6 +1,6 @@
 import asyncio
 
-from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
 
 
 def _runner(tmp_path):

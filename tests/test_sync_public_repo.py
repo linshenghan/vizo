@@ -85,18 +85,12 @@ def test_public_manifest_uses_explicit_root_entrypoints():
     assert "lib/runtime/subagents/*.py" in manifest_lines
 
     expected_root_entrypoints = {
-        "agent_hub.py",
-        "agent_router.py",
-        "agent_runner.py",
         "opus.py",
-        "orchestrator.py",
-        "secretary.py",
-        "state_manager.py",
-        "stream_renderer.py",
-        "user_interface.py",
         "vizo.py",
     }
     assert expected_root_entrypoints.issubset(set(manifest_lines))
+    assert "vizo_core/*.py" in manifest_lines
+    assert "docs/USER-MANUAL.md" in manifest_lines
 
     removed_root_files = {
         "build.sh",

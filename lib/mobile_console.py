@@ -1,12 +1,10 @@
 """
 Mobile Web Console for Vizo.
 
-`/vizo/m` keeps legacy mobile authentication and PWA endpoints, then redirects
-authenticated users to the PC Dialogue Console. Mobile no longer renders a
-separate Dialogue Console shell.
+`/vizo/m` keeps mobile PWA endpoints, then redirects users to the PC Dialogue
+Console. Mobile no longer renders a separate Dialogue Console shell.
 """
 
-import hashlib
 import logging
 
 from aiohttp import web
@@ -15,72 +13,18 @@ logger = logging.getLogger("mobile_console")
 
 
 class MobileConsoleHandler:
-    """Mobile console handler — auth + 3 page routes."""
+    """Mobile console handler — PWA + redirect routes."""
 
     def __init__(self, config: dict, password_manager=None):
         self._config = config
-        self._token = config.get("token", "")
-        self._token_hash = hashlib.sha256(self._token.encode()).hexdigest() if self._token else ""
-        self._cookie_max_age = config.get("cookie_max_age_days", 30) * 86400
         self._password_mgr = password_manager
 
     def _check_auth(self, request) -> bool:
-        """Verify authentication cookie (bcrypt priority, token fallback)."""
-        cookie_val = request.cookies.get("vizo_web_token", "")
-        if not cookie_val:
-            return False
-        if self._password_mgr and self._password_mgr.has_password():
-            return cookie_val == self._password_mgr.get_cookie_value()
-        return cookie_val == self._token_hash and bool(self._token_hash)
-
-    async def handle_login_page(self, request):
-        """GET /vizo/m/login"""
-        html = MOBILE_LOGIN_HTML.replace("{{error_display}}", "none").replace("{{error_message}}", "")
-        return web.Response(text=html, content_type="text/html")
-
-    async def handle_login(self, request):
-        """POST /vizo/m/login"""
-        data = await request.post()
-        password = data.get("token", "")
-
-        # bcrypt priority
-        if self._password_mgr and self._password_mgr.has_password():
-            if self._password_mgr.verify_password(password):
-                resp = web.HTTPSeeOther("/vizo/m")
-                resp.set_cookie(
-                    "vizo_web_token",
-                    self._password_mgr.get_cookie_value(),
-                    httponly=True,
-                    path="/vizo",
-                    max_age=self._cookie_max_age,
-                    samesite="Lax",
-                )
-                return resp
-            html = MOBILE_LOGIN_HTML.replace("{{error_display}}", "block").replace(
-                "{{error_message}}", "密码错误，请重试")
-            return web.Response(text=html, content_type="text/html")
-
-        # fallback: legacy token auth
-        if password == self._token and self._token:
-            resp = web.HTTPSeeOther("/vizo/m")
-            resp.set_cookie(
-                "vizo_web_token",
-                self._token_hash,
-                httponly=True,
-                path="/vizo",
-                max_age=self._cookie_max_age,
-                samesite="Lax",
-            )
-            return resp
-
-        html = MOBILE_LOGIN_HTML.replace("{{error_display}}", "block").replace(
-            "{{error_message}}", "密码错误，请重试")
-        return web.Response(text=html, content_type="text/html")
+        """Console access is open; legacy auth guards remain as no-op checks."""
+        return True
 
     async def handle_console(self, request):
         """GET /vizo/m"""
-        if not self._check_auth(request):
-            raise web.HTTPFound("/vizo/m/login")
         raise web.HTTPFound("/vizo/console/dialogue")
 
     async def handle_pwa_manifest(self, request):
@@ -97,107 +41,6 @@ class MobileConsoleHandler:
             content_type="application/javascript",
             headers={"Service-Worker-Allowed": "/vizo/m"},
         )
-
-
-# ============================================================
-# Mobile Login Page HTML
-# ============================================================
-MOBILE_LOGIN_HTML = """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-<title>Vizo Mobile - Login</title>
-<style>
-:root {
-  --bg-primary: #0a0e17;
-  --bg-secondary: #111827;
-  --bg-input: #0f1923;
-  --text-primary: #e2e8f0;
-  --text-muted: #64748b;
-  --accent: #38bdf8;
-  --purple: #a78bfa;
-  --red: #ef4444;
-  --border: #1e3a5f;
-  --radius: 8px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
-  height: 100vh; height: 100dvh;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 1rem;
-  -webkit-tap-highlight-color: transparent;
-}
-.http-warn {
-  display: none;
-  position: fixed; top: 0; left: 0; right: 0;
-  background: #92400e; color: #fef3c7;
-  font-size: 0.75rem; text-align: center;
-  padding: 6px 12px; z-index: 100;
-}
-.auth-box {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 2.5rem 1.5rem;
-  width: 100%; max-width: 360px;
-  text-align: center;
-  box-shadow: var(--shadow);
-}
-.auth-logo {
-  font-size: 2rem; font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  margin-bottom: 0.3rem;
-}
-.auth-subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.85rem; }
-.auth-input {
-  width: 100%; padding: 0.8rem 1rem;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text-primary);
-  font-size: 16px; outline: none;
-  transition: border-color var(--transition);
-  -webkit-appearance: none;
-}
-.auth-input:focus { border-color: var(--accent); }
-.auth-input::placeholder { color: var(--text-muted); }
-.auth-btn {
-  width: 100%; padding: 0.8rem;
-  background: linear-gradient(135deg, #0369a1, #0284c7);
-  border: none; border-radius: var(--radius);
-  color: white; font-size: 1rem; font-weight: 600;
-  cursor: pointer; margin-top: 1rem;
-  transition: all var(--transition);
-  -webkit-appearance: none;
-}
-.auth-btn:active { transform: scale(0.98); opacity: 0.9; }
-.auth-error { color: var(--red); font-size: 0.85rem; margin-top: 0.8rem; display: {{error_display}}; }
-</style>
-</head>
-<body>
-<div class="http-warn" id="httpWarn">当前为 HTTP 连接，密码可能被窃听。建议使用 HTTPS。</div>
-<div class="auth-box">
-  <div class="auth-logo">维造 Vizo</div>
-  <div class="auth-subtitle">Vizo Mobile Console</div>
-  <form method="POST" action="/vizo/m/login">
-    <input type="password" class="auth-input" name="token" placeholder="请输入密码..." autocomplete="off" autofocus>
-    <button type="submit" class="auth-btn">登录</button>
-  </form>
-  <div class="auth-error">{{error_message}}</div>
-</div>
-<script>
-if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'){
-  document.getElementById('httpWarn').style.display='block';
-}
-</script>
-</body>
-</html>"""
 
 
 # ============================================================
@@ -1343,13 +1186,7 @@ html, body {
           </div>
         </div>
         <div class="me-section">
-          <div class="me-section-title">账户与安全</div>
-          <div class="me-item disabled">
-            <span class="me-item-icon">&#128274;</span>
-            <span class="me-item-label">修改密码</span>
-            <span class="me-item-meta">P2</span>
-            <span class="me-item-arrow">&#8250;</span>
-          </div>
+          <div class="me-section-title">关于</div>
           <div class="me-item disabled">
             <span class="me-item-icon">&#8505;</span>
             <span class="me-item-label">关于维造 Vizo</span>
@@ -1576,7 +1413,7 @@ async function apiCall(url, options) {
   try {
     var resp = await fetch(url, options);
     if (resp.status === 401) {
-      location.href = '/vizo/m/login';
+      showToast('请求未授权');
       return null;
     }
     if (!resp.ok) {

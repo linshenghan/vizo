@@ -13,15 +13,17 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from agent_runner import AgentRunner, AgentResult, AgentTimeoutError, AgentError, AgentRateLimitError, AgentSignalInterrupt
-from state_manager import StateManager, Task, WorkflowError, GitMergeConflict
-from user_interface import UserInterface, ConfirmContext
+from vizo_core.agent_runner import AgentRunner, AgentResult, AgentTimeoutError, AgentError, AgentRateLimitError, AgentSignalInterrupt
+from vizo_core.state_manager import StateManager, Task, WorkflowError, GitMergeConflict
+from vizo_core.user_interface import UserInterface, ConfirmContext
 from lib.runtime.subagents.controller import SubAgentRuntimeController
 from lib.paths import (
     CONFIRMS_DIR,
     iter_task_dirs,
     task_dir as resolve_task_dir,
 )
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ def load_config(config_path: str) -> dict:
         return _cl_load()
     except Exception:
         # 兜底：直接读 JSON（config_loader 不可用时）
-        config_file = Path(__file__).parent / config_path
+        config_file = _PROJECT_ROOT / config_path
         with open(config_file) as f:
             return json.load(f)
 
@@ -1675,7 +1677,7 @@ class Orchestrator:
         context_path.write_text(context_text + "\n", encoding="utf-8")
 
     async def _run_frontend_design_gate(self, task: Task, *, project_root: Path) -> dict:
-        from agent_hub import AgentHub
+from vizo_core.agent_hub import AgentHub
 
         hub = AgentHub(self.config)
         hub.ui = self.ui
@@ -1879,7 +1881,7 @@ class Orchestrator:
             if backend_needed and frontend_needed:
                 # 前后端都有改动 → worktree 并行开发 + 合并
                 self.state.update_step(task, "backend_dev")
-                from stream_renderer import LayoutStateMachine
+from vizo_core.stream_renderer import LayoutStateMachine
                 worktrees = await self.state.create_worktrees(task, branches=["backend", "frontend"])
 
                 # 初始化分屏状态机
@@ -3981,7 +3983,7 @@ class Orchestrator:
         button_set: str = "generic_confirm",
     ) -> ConfirmContext:
         """构建确认消息的上下文"""
-        from stream_renderer import ROLE_DISPLAY
+from vizo_core.stream_renderer import ROLE_DISPLAY
 
         # 任务累计费用
         task_cost = self.state.get_task_cost(task)
@@ -4435,7 +4437,7 @@ class Orchestrator:
         Returns:
             [{"type": "read", "target": "src/foo.py", "snippet": None, "timestamp": "10:23:45"}, ...]
         """
-        from stream_renderer import ToolNameMapper
+from vizo_core.stream_renderer import ToolNameMapper
 
         event_type = event.get("type", "")
         ts = time.strftime("%H:%M:%S")
@@ -4761,7 +4763,7 @@ class Orchestrator:
 
     def show_history(self):
         """查看最近10个任务"""
-        from state_manager import Task
+from vizo_core.state_manager import Task
 
         # 收集任务
         tasks = []
@@ -4832,7 +4834,7 @@ class Orchestrator:
 
     def show_task_list(self, limit: int = 10):
         """列出最近的任务（精简表格）"""
-        from state_manager import Task
+from vizo_core.state_manager import Task
 
         # 收集任务（复用 show_history 的扫描逻辑）
         tasks = []
@@ -4892,7 +4894,7 @@ class Orchestrator:
 
     def show_task_detail(self, task_id: str):
         """显示指定任务的详情和文档摘要"""
-        from state_manager import Task
+from vizo_core.state_manager import Task
 
         task_dir = resolve_task_dir(task_id, project_root=self.state.project_path)
         state_file = task_dir / "state.json"
@@ -5162,7 +5164,7 @@ class Orchestrator:
             )
             if result.returncode == 0:
                 # 查找非主 worktree
-                from state_manager import WorktreeInfo
+from vizo_core.state_manager import WorktreeInfo
                 worktrees = {}
                 lines = result.stdout.strip().split("\n")
                 for line in lines:
@@ -5223,7 +5225,7 @@ class Orchestrator:
         stream_renderer = None
         task_dir_path = Path(str(kwargs.get("task_dir", ""))) if kwargs.get("task_dir") else None
         if task_dir_path:
-            from stream_renderer import StreamRenderer
+from vizo_core.stream_renderer import StreamRenderer
             log_dir = task_dir_path / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
             _log_step_id = step_name or (task.current_step if task else None) or role
@@ -5593,7 +5595,7 @@ class Orchestrator:
         2. 回调通过 on_action/on_stream_event 参数传递给 agent.run()，不设置实例属性
         3. 完成/失败时通知 LayoutStateMachine
         """
-        from stream_renderer import StreamRenderer
+from vizo_core.stream_renderer import StreamRenderer
 
         role = kwargs.get("role", "unknown")
         await self._check_budget(role)
@@ -5930,7 +5932,7 @@ class Orchestrator:
 
     def _humanize_error(self, role: str, error: Exception) -> str:
         """将技术异常转化为用户可读的中文摘要"""
-        from stream_renderer import ROLE_DISPLAY
+from vizo_core.stream_renderer import ROLE_DISPLAY
         try:
             if role.startswith("sub-task:"):
                 role_cn = f"子任务：{role[len('sub-task:'):]}"
@@ -6042,7 +6044,7 @@ class Orchestrator:
 
         if idx == len(options) - 1:
             # 跳过此步骤
-            from agent_runner import AgentResult
+from vizo_core.agent_runner import AgentResult
             self.ui.print_warning(f"已跳过 [{role}]")
             return AgentResult(
                 success=True, data={"status": "skipped"},

@@ -21,14 +21,15 @@ from pathlib import Path
 
 from lib.confirm_server_runtime import resolve_confirm_server_pid_file, resolve_confirm_server_port
 
-# 确保能 import 同目录下的模块
-sys.path.insert(0, str(Path(__file__).parent))
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 logger = logging.getLogger(__name__)
 
 
 def _load_secretary_config(config_arg: str) -> dict:
-    project_root = Path(__file__).parent
+    project_root = _PROJECT_ROOT
     requested = (project_root / config_arg).resolve()
     default_config = (project_root / "config.json").resolve()
     if requested == default_config:
@@ -41,7 +42,7 @@ def _load_secretary_config(config_arg: str) -> dict:
 
 def _resolve_secretary_log_file() -> Path:
     """选择一个当前用户可写的日志文件路径。"""
-    project_root = Path(__file__).parent
+    project_root = _PROJECT_ROOT
     candidates = [
         project_root / "logs" / "secretary.log",
         Path.home() / ".local" / "state" / "vizo" / "logs" / "secretary.log",
@@ -69,7 +70,7 @@ class Secretary:
 
     async def _start_confirm_server(self):
         """启动 confirm_server 作为子进程（前台模式），跟随 secretary 生命周期"""
-        confirm_script = str(Path(__file__).parent / "lib" / "confirm_server.py")
+        confirm_script = str(_PROJECT_ROOT / "lib" / "confirm_server.py")
         confirm_port = resolve_confirm_server_port(self.config)
 
         # 先杀掉可能残留的旧进程（上次异常退出遗留的孤儿进程）

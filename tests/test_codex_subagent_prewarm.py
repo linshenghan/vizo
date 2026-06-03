@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from agent_runner import AgentError, AgentTimeoutError
+from vizo_core.agent_runner import AgentError, AgentTimeoutError
 from lib.runtime.subagents.controller import _classify_error_status
 from lib.runtime.subagents.codex import (
     CODEX_CLOUD_REQUIREMENTS_ERROR_CODE,

@@ -15,7 +15,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
 from lib.paths import (
     iter_task_dirs,
     task_dir as resolve_task_dir,
@@ -25,7 +25,7 @@ from lib.project_memory_whitelist import load_project_memory_whitelist, resolve_
 from lib.runtime.subagents.controller import SubAgentRuntimeController
 from lib.task_resource_guard import assert_task_creation_allowed
 from lib.task_titles import summarize_task_title
-from user_interface import ConfirmContext, UserInterface
+from vizo_core.user_interface import ConfirmContext, UserInterface
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ class AgentHub:
 
     def _load_and_validate_manifest(self, module_id: str) -> tuple:
         """加载并校验 manifest，返回 (manifest, module_dir)"""
-        base_dir = Path(__file__).parent / "agents"
+        base_dir = Path(__file__).resolve().parents[1] / "agents"
         module_dir = None
 
         for search_dir in [base_dir / "_builtin", base_dir / "_user"]:
@@ -998,7 +998,7 @@ class AgentHub:
         if html_outputs:
             try:
                 result = subprocess.run(
-                    ["python3", str(Path(__file__).parent / "lib" / "preview_server.py"),
+                    ["python3", str(Path(__file__).resolve().parents[1] / "lib" / "preview_server.py"),
                     "create", f"AgentHub: {task.get('task_name') or task['description'][:50]}", "-f", str(html_outputs[-1])],
                     capture_output=True, text=True, timeout=10
                 )
@@ -1020,7 +1020,7 @@ class AgentHub:
                 html_path.write_text(combined, encoding="utf-8")
 
                 result = subprocess.run(
-                    ["python3", str(Path(__file__).parent / "lib" / "preview_server.py"),
+                    ["python3", str(Path(__file__).resolve().parents[1] / "lib" / "preview_server.py"),
                     "create", f"AgentHub: {task.get('task_name') or task['description'][:50]}", "-f", str(html_path)],
                     capture_output=True, text=True, timeout=10
                 )
@@ -1133,7 +1133,7 @@ class AgentHub:
             memories_output_dir.mkdir(parents=True, exist_ok=True)
 
             # 读取角色模板
-            role_template_path = Path(__file__).parent / "role_templates" / "knowledge_extractor.md"
+            role_template_path = Path(__file__).resolve().parents[1] / "role_templates" / "knowledge_extractor.md"
             role_template = role_template_path.read_text(encoding="utf-8")
 
             # 收集产出文件内容

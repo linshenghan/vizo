@@ -514,7 +514,7 @@ async def call_agent_creator(config: dict, description: str) -> dict:
         )
 
         # 2. 调用 AgentRunner
-        from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
         runner = AgentRunner(config)
         await runner.run(
             role="agent_creator",

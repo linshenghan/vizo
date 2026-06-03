@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from agent_runner import AgentError, AgentResult, AgentTimeoutError
+from vizo_core.agent_runner import AgentError, AgentResult, AgentTimeoutError
 from lib.runtime.contracts import RUNTIME_FAMILY_CLAUDE_CODE, RUNTIME_FAMILY_CODEX
 from lib.runtime.subagents.controller import SubAgentRuntimeController
 

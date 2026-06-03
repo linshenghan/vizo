@@ -93,7 +93,7 @@ class AgentRouter:
         _user 结构:    agents/_user/{namespace}/{module_id}/manifest.json
         """
         modules = []
-        base_dir = Path(__file__).parent / "agents"
+        base_dir = Path(__file__).resolve().parents[1] / "agents"
 
         # _builtin: 单层扫描
         builtin_dir = base_dir / "_builtin"

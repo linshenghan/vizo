@@ -24,8 +24,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from agent_router import AgentRouter
-from agent_runner import AgentRunner
+from vizo_core.agent_router import AgentRouter
+from vizo_core.agent_runner import AgentRunner
 from lib.config_loader import load_config
 from lib.interaction_design_service import InteractionDesignService
 from lib.runtime.events import utcnow_iso

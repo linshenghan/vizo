@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-import user_interface
-from user_interface import UserInterface
+import vizo_core.user_interface as user_interface
+from vizo_core.user_interface import UserInterface
 
 
 class _Live:

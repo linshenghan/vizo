@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-import agent_hub
-from agent_hub import AgentHub, PauseSignal
+import vizo_core.agent_hub as agent_hub
+from vizo_core.agent_hub import AgentHub, PauseSignal
 
 
 class _FakeRuntimeController:

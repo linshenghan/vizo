@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
 from lib.paths import iter_task_dirs
 from lib.runtime.events import utcnow_iso
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
 from lib.paths import (
     DATA_DIR_NAME,
     VIZO_HOME,

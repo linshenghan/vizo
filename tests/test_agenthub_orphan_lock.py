@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
-from agent_hub import AgentHub
-from agent_runner import AgentRunner
+from vizo_core.agent_hub import AgentHub
+from vizo_core.agent_runner import AgentRunner
 from lib.confirm_server import ConfirmServer
 from lib.settings_handler import ModelConfigManager, make_main_session_role_model_id
 from lib.settings_handler import resolve_subagent_codex_candidate

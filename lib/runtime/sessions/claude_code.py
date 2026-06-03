@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 
-from agent_runner import AgentError, AgentRunner, AgentTimeoutError
+from vizo_core.agent_runner import AgentError, AgentRunner, AgentTimeoutError
 from lib.mcp_runtime import build_main_session_mcp_config, build_main_session_mcp_env
 from lib.settings_handler import get_main_session_api_model, infer_main_session_display_model
 

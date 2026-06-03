@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from agent_runner import AgentError, AgentRateLimitError
+from vizo_core.agent_runner import AgentError, AgentRateLimitError
 from lib.mcp_runtime import (
     build_codex_mcp_config_overrides,
     build_main_session_mcp_config,

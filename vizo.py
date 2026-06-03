@@ -11,9 +11,9 @@ os.environ.setdefault("OPUS_BRAND_DISPLAY", "Vizo")
 os.environ.setdefault("OPUS_COMPAT_ENTRY", "0")
 sys.argv[0] = "vizo"
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from opus import main
+from vizo_core.opus import main
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ services:
     build: .
     image: ${VIZO_IMAGE_NAME:-vizo:latest}
     working_dir: /app
-    command: ["python3", "/app/secretary.py"]
+    command: ["python3", "-m", "vizo_core.secretary"]
     ports:
       - "9390:9390"
     environment:
@@ -16,7 +16,6 @@ services:
       PUBLIC_BASE_URL: ${VIZO_PUBLIC_BASE_URL:-http://127.0.0.1:9390}
       VIZO_HOST_NPM_MOUNT: /opt/vizo-host/npm-global
       VIZO_RUNTIME_NPM_PREFIX: /usr/local
-      WEB_CONSOLE_TOKEN: ${VIZO_WEB_CONSOLE_TOKEN:-}
       REDIS_HOST: vizo-redis
       REDIS_PORT: "6379"
       TZ: Asia/Shanghai

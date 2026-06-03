@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from agent_runner import AgentError, AgentRunner
+from vizo_core.agent_runner import AgentError, AgentRunner
 from lib.config_loader import load_config
 from lib.interaction_design_service import InteractionDesignInterception, InteractionDesignService
 from lib.project_identity import normalize_runtime_path

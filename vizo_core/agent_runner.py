@@ -1615,7 +1615,7 @@ class AgentRunner:
         if template_override:
             template_path = Path(template_override)
         else:
-            template_path = Path(__file__).parent / "role_templates" / f"{role}.md"
+            template_path = Path(__file__).resolve().parents[1] / "role_templates" / f"{role}.md"
         if template_path.exists():
             role_template = template_path.read_text(encoding="utf-8")
         else:
@@ -1792,7 +1792,7 @@ class AgentRunner:
         if not matches:
             return ""
 
-        base_dir = Path(__file__).parent
+        base_dir = Path(__file__).resolve().parents[1]
         doc_texts = []
         seen = set()
 

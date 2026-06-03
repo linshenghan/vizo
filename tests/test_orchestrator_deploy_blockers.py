@@ -17,8 +17,8 @@ agent_runner_stub.AgentRateLimitError = Exception
 agent_runner_stub.AgentSignalInterrupt = Exception
 sys.modules.setdefault("agent_runner", agent_runner_stub)
 
-from orchestrator import Orchestrator
-from state_manager import Task
+from vizo_core.orchestrator import Orchestrator
+from vizo_core.state_manager import Task
 
 
 class RecordingUI:

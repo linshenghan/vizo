@@ -1,9 +1,18 @@
 # Vizo
 
-Vizo is a local AI collaboration workbench for software delivery. It combines a
-multi-agent CLI, a browser console, task recovery, and model routing so that
-larger coding tasks can move through analysis, planning, implementation,
-verification, and documentation with explicit human control points.
+[简体中文](README.zh-CN.md) | English
+
+Vizo is a browser-based workbench and workflow layer for using Codex and Claude
+Code on Linux. Both tools are powerful in the terminal, but a pure CLI leaves
+important gaps: images are hard to inspect, generated documents are awkward to
+preview, long-running tasks are difficult to follow visually, and users who run
+both Codex and Claude Code have to switch between multiple commands and
+sessions.
+
+Vizo keeps the CLI power underneath, then adds the missing product surface on
+top: a Web Console, image and document previews, persistent sessions, task
+history, model/runtime switching, and a structured development workflow that can
+carry a request from idea to tested implementation.
 
 This repository is the public distribution of Vizo. It is generated from a
 private working repository through a whitelist sync process. Runtime state,
@@ -13,15 +22,24 @@ excluded.
 
 ## Why Vizo Exists
 
-Most AI coding tools are optimized for a single interactive session. Vizo is
-designed for longer work that needs orchestration:
+Vizo starts from a practical problem: Codex and Claude Code are excellent CLI
+agents, but the terminal is not a complete client experience.
 
-- break a request into role-based workflow stages;
-- run specialized agents with controlled tool permissions;
-- preserve task state, cost records, outputs, and recovery points;
-- expose the work through both CLI and browser interfaces;
-- route non-development requests to reusable AgentHub modules;
-- keep local project knowledge separate from disposable chat context.
+- **Linux users need a real workbench**: Vizo adds a browser interface for
+  sessions, task state, logs, generated files, image previews, and document
+  previews.
+- **Multi-runtime users need one place to work**: Vizo lets people use Codex and
+  Claude Code through one project console instead of constantly switching
+  between separate CLI sessions.
+- **Long tasks need workflow control**: Vizo records progress, outputs, costs,
+  recovery points, confirmations, pause/resume state, and rollback points.
+- **Non-programmers need a development process, not a prompt box**: a product
+  manager can describe a requirement and let Vizo run a full development
+  workflow with requirement analysis, PRD writing, architecture, frontend and
+  backend implementation, integration, testing, fixes, and documentation.
+- **Teams need reusable structure**: Vizo keeps role prompts, project memory,
+  AgentHub modules, and task outputs organized instead of leaving everything in
+  disposable terminal scrollback.
 
 The default entry point is `vizo`. The older `opus.py` entry point remains in
 the codebase as a compatibility layer because parts of the runtime still share
@@ -29,24 +47,27 @@ the historical Opus naming.
 
 ## Core Capabilities
 
-- **Multi-agent development workflows**: requirement analysis, product planning,
-  architecture, implementation, integration, QA, fixes, deployment checks, and
-  knowledge capture.
-- **AgentHub modules**: manifest-driven workflows for domain-specific tasks.
+- **Unified client for Codex and Claude Code**: manage Linux CLI-based AI
+  sessions from one browser console, with runtime/model switching and persistent
+  project context.
+- **Richer than a terminal**: preview images, generated Markdown/documents,
+  task outputs, logs, and browser artifacts without leaving the Vizo console.
+- **Full development workflow for non-programmers**: turn a natural-language
+  requirement into a staged delivery process handled by roles such as
+  requirement analyst, product manager, architect, frontend developer, backend
+  developer, integration engineer, QA, and fix engineer.
+- **Multi-agent software delivery**: break complex work into role-based stages,
+  enforce confirmations where needed, and preserve every output as a traceable
+  task artifact.
+- **Task control and recovery**: pause, resume, terminate, rollback to a
+  workflow step, view history, inspect costs, and replay work logs.
+- **Model routing and fallback**: configure role-level model preferences across
+  Claude Code, Codex, and external model endpoints.
+- **AgentHub modules**: run manifest-driven workflows for domain-specific work.
   The public repo currently includes built-in contract service and interaction
   design modules.
-- **Model routing and fallback**: role-level model preferences, Claude Code and
-  Codex runtime support, and external model configuration.
-- **Task control**: pause, resume, terminate, rollback to a workflow step, view
-  history, inspect costs, and replay work logs.
-- **Web Console**: browser-based sessions, project/task management, live events,
-  settings, runtime diagnostics, MCP service management, and output previews.
-- **Mobile Console**: a compact control surface for task review and operations
-  on phones or tablets.
-- **MCP integration**: project memory through Serena, Chrome bridge, Vizo
-  routing tools, and optional browser automation services.
-- **Local-first deployment**: Docker Compose for an all-in-one stack, or a local
-  Python process with Redis.
+- **Local-first deployment**: run with Docker Compose as an all-in-one stack, or
+  use a local Python process with Redis.
 
 ## Architecture At A Glance
 
@@ -68,31 +89,27 @@ flowchart LR
   state --> outputs[Task Outputs]
 ```
 
-The normal service process is `secretary.py`. It starts and supervises
+The normal service process is `python3 -m vizo_core.secretary`. It starts and supervises
 `lib/confirm_server.py`, which serves the Web Console, confirmation pages, task
 APIs, output previews, mobile console, and Chrome bridge endpoints.
 
 ## Repository Layout
 
-| Path | Purpose |
-| --- | --- |
-| `vizo`, `vizo.py` | Public CLI shim and branded entry point. |
-| `opus.py` | Main CLI implementation and compatibility entry point. |
-| `orchestrator.py` | Development workflow selection and execution. |
-| `agent_runner.py` | Agent subprocess execution, prompting, cost tracking, and runtime integration. |
-| `agent_router.py` | Routes requests to development workflows or AgentHub modules. |
-| `agent_hub.py` | Manifest-driven non-development workflow engine. |
-| `state_manager.py` | Task state, Git worktrees, rollback, and history. |
-| `lib/confirm_server.py` | Web server, task APIs, confirmation pages, previews, and console routes. |
-| `lib/web_console.py` | Desktop Web Console SPA handlers and APIs. |
-| `lib/mobile_console.py` | Mobile Console handlers. |
-| `lib/runtime/` | Persistent Claude Code and Codex session runtimes. |
-| `hooks/` | Tool-use, session-start, stop, and compaction hooks. |
-| `role_templates/` | Built-in role prompts and referenced document templates. |
-| `agents/_builtin/` | Built-in AgentHub modules. |
-| `docs/` | Focused operational documentation. |
-| `tests/` | Public regression tests. |
-| `PUBLIC_SYNC_MANIFEST.txt` | Whitelist that defines what can be copied into this public repo. |
+| Path                       | Purpose                                                                    |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `vizo`, `vizo.py`          | Public CLI shim and branded entry point.                                   |
+| `opus.py`                  | Legacy compatibility entry point.                                          |
+| `vizo_core/`               | CLI implementation, orchestration, AgentHub, agent runtime, UI, and state. |
+| `lib/confirm_server.py`    | Web server, task APIs, confirmation pages, previews, and console routes.   |
+| `lib/web_console.py`       | Desktop Web Console SPA handlers and APIs.                                 |
+| `lib/mobile_console.py`    | Mobile Console handlers.                                                   |
+| `lib/runtime/`             | Persistent Claude Code and Codex session runtimes.                         |
+| `hooks/`                   | Tool-use, session-start, stop, and compaction hooks.                       |
+| `role_templates/`          | Built-in role prompts and referenced document templates.                   |
+| `agents/_builtin/`         | Built-in AgentHub modules.                                                 |
+| `docs/`                    | Focused operational documentation.                                         |
+| `tests/`                   | Public regression tests.                                                   |
+| `PUBLIC_SYNC_MANIFEST.txt` | Whitelist that defines what can be copied into this public repo.           |
 
 ## Quick Start With Docker Compose
 
@@ -111,12 +128,7 @@ Edit `.env` and set at least:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
-WEB_CONSOLE_TOKEN=change-me
-VIZO_WEB_CONSOLE_TOKEN=change-me
 ```
-
-`WEB_CONSOLE_TOKEN` is used by local runs. The default Compose file reads
-`VIZO_WEB_CONSOLE_TOKEN` and passes it into the container as `WEB_CONSOLE_TOKEN`.
 
 For the default Compose port mapping, make sure `config.json` uses port `9390`:
 
@@ -183,24 +195,24 @@ python3 lib/confirm_server.py start -f -p 9390
 Or start the supervisor:
 
 ```bash
-python3 secretary.py
+python3 -m vizo_core.secretary
 ```
 
 ## Common CLI Commands
 
-| Command | What it does |
-| --- | --- |
-| `./vizo "task"` | Start a routed task. |
-| `./vizo "task" --dev` | Force the development workflow and skip AgentHub routing. |
-| `./vizo --workflow bug_fix "task"` | Run a specific development workflow. |
-| `./vizo --chat "question"` | Answer directly without the full workflow. |
-| `./vizo --task` | List tasks. |
-| `./vizo --task <task_id>` | Show one task. |
-| `./vizo --pause [task_id]` | Request a task pause. |
-| `./vizo --resume [--task-id <task_id>]` | Resume an incomplete task. |
-| `./vizo --rollback <task_id> --step <step>` | Roll back to a workflow step. |
-| `./vizo --terminate <task_id>` | Terminate a task, with rollback by default. |
-| `./vizo agents` | List installed AgentHub modules. |
+| Command                                     | What it does                                              |
+| ------------------------------------------- | --------------------------------------------------------- |
+| `./vizo "task"`                             | Start a routed task.                                      |
+| `./vizo "task" --dev`                       | Force the development workflow and skip AgentHub routing. |
+| `./vizo --workflow bug_fix "task"`          | Run a specific development workflow.                      |
+| `./vizo --chat "question"`                  | Answer directly without the full workflow.                |
+| `./vizo --task`                             | List tasks.                                               |
+| `./vizo --task <task_id>`                   | Show one task.                                            |
+| `./vizo --pause [task_id]`                  | Request a task pause.                                     |
+| `./vizo --resume [--task-id <task_id>]`     | Resume an incomplete task.                                |
+| `./vizo --rollback <task_id> --step <step>` | Roll back to a workflow step.                             |
+| `./vizo --terminate <task_id>`              | Terminate a task, with rollback by default.               |
+| `./vizo agents`                             | List installed AgentHub modules.                          |
 
 ## Configuration
 
@@ -210,15 +222,14 @@ platform's secret store in production.
 
 Important variables include:
 
-| Variable | Purpose |
-| --- | --- |
-| `ANTHROPIC_API_KEY` or `OPUS_MAIN_API_KEY` | Main Anthropic-compatible API key. |
-| `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint override. |
-| `DEEPSEEK_API_KEY`, `GLM_API_KEY`, `QWEN_API_KEY` | Optional external model keys. |
-| `WEB_CONSOLE_TOKEN` | Web Console password/token override. |
-| `REDIS_HOST`, `REDIS_PORT` | Redis connection override. |
-| `CONFIRM_SERVER_HOST`, `CONFIRM_SERVER_PORT` | Web service bind settings. |
-| `PUBLIC_BASE_URL` | Public URL used when generating preview links. |
+| Variable                                          | Purpose                                          |
+| ------------------------------------------------- | ------------------------------------------------ |
+| `ANTHROPIC_API_KEY` or `OPUS_MAIN_API_KEY`        | Main Anthropic-compatible API key.               |
+| `ANTHROPIC_BASE_URL`                              | Optional Anthropic-compatible endpoint override. |
+| `DEEPSEEK_API_KEY`, `GLM_API_KEY`, `QWEN_API_KEY` | Optional external model keys.                    |
+| `REDIS_HOST`, `REDIS_PORT`                        | Redis connection override.                       |
+| `CONFIRM_SERVER_HOST`, `CONFIRM_SERVER_PORT`      | Web service bind settings.                       |
+| `PUBLIC_BASE_URL`                                 | Public URL used when generating preview links.   |
 
 ## Web Routes
 
@@ -226,18 +237,17 @@ The primary route prefix is `/vizo`. The server also registers versionless
 aliases for many routes, but new documentation and integrations should prefer
 the explicit `/vizo/...` paths.
 
-| Route | Purpose |
-| --- | --- |
-| `/vizo/console` | Desktop Web Console. |
-| `/vizo/console/setup` | First-run setup wizard. |
-| `/vizo/m` | Mobile Console. |
-| `/vizo/tasks` | Task list page. |
-| `/vizo/tasks/{task_id}` | Task detail page. |
-| `/vizo/confirm/{request_id}` | Human confirmation page. |
-| `/vizo/preview/{preview_id}` | Output preview page. |
-| `/vizo/docs/` | Generated task document listing. |
-| `/vizo/chrome/connect` | Chrome bridge connection page. |
-| `/vizo/health` | Service health check. |
+| Route                        | Purpose                          |
+| ---------------------------- | -------------------------------- |
+| `/vizo/console`              | Desktop Web Console.             |
+| `/vizo/console/setup`        | First-run setup wizard.          |
+| `/vizo/tasks`                | Task list page.                  |
+| `/vizo/tasks/{task_id}`      | Task detail page.                |
+| `/vizo/confirm/{request_id}` | Human confirmation page.         |
+| `/vizo/preview/{preview_id}` | Output preview page.             |
+| `/vizo/docs/`                | Generated task document listing. |
+| `/vizo/chrome/connect`       | Chrome bridge connection page.   |
+| `/vizo/health`               | Service health check.            |
 
 ## Testing
 
@@ -275,13 +285,12 @@ explicitly protected paths such as `.git`.
   placeholders and example values, not hardened production policy.
 - Use a reverse proxy and TLS before exposing the Web Console to a network you
   do not fully control.
-- Set a strong `WEB_CONSOLE_TOKEN` or initialize a strong password through the
-  setup wizard.
+- Restrict Web Console network access with a reverse proxy, firewall, VPN, or
+  another external access-control layer when deploying beyond localhost.
 - Choose and add a license before publishing broadly. Without a license, others
   can view the code but do not receive clear reuse rights.
 
 ## More Documentation
 
 - [Deployment Guide](docs/DEPLOYMENT.md)
-- [User Manual](USER-MANUAL.md)
-- [Doc Server Deployment](docs/DOC_SERVER_DEPLOYMENT.md)
+- [User Manual](docs/USER-MANUAL.md)

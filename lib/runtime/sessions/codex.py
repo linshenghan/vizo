@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_runner import AgentError, AgentRunner, AgentRateLimitError, AgentTimeoutError
+from vizo_core.agent_runner import AgentError, AgentRunner, AgentRateLimitError, AgentTimeoutError
 from lib.mcp_runtime import build_codex_mcp_config_overrides, build_main_session_mcp_env
 from lib.runtime.codex_cli import resolve_codex_main_session_sandbox
 from lib.runtime.sessions.persistent_runtime import resolve_connection_codex_home

@@ -4,7 +4,8 @@
 # Lines beginning with "!" are exclusion rules.
 
 README.md
-USER-MANUAL.md
+README.zh-CN.md
+docs/USER-MANUAL.md
 requirements.txt
 .env.example
 config.json.example
@@ -15,16 +16,9 @@ Dockerfile
 docker-compose.yml
 vizo
 
-agent_hub.py
-agent_router.py
-agent_runner.py
 opus.py
-orchestrator.py
-secretary.py
-state_manager.py
-stream_renderer.py
-user_interface.py
 vizo.py
+vizo_core/*.py
 lib/*.py
 lib/runtime/*.py
 lib/runtime/sessions/*.py
@@ -54,7 +48,6 @@ role_templates/**
 agents/_builtin/**
 docker/**
 
-docs/DOC_SERVER_DEPLOYMENT.md
 docs/DEPLOYMENT.md
 docs/opus系统 CLI兼容方案.md
 

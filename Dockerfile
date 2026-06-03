@@ -85,5 +85,5 @@ RUN mkdir -p /app/.vizo /app/logs /home/vizo
 # 暴露 confirm_server 端口
 EXPOSE 9390
 
-# 启动入口：secretary.py 管理 confirm_server 生命周期
-CMD ["python3", "secretary.py"]
+# 启动入口：secretary 模块管理 confirm_server 生命周期
+CMD ["python3", "-m", "vizo_core.secretary"]

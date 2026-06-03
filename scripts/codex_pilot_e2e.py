@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from agent_runner import AgentRunner
+from vizo_core.agent_runner import AgentRunner
 from lib.config_loader import load_config
 from lib.runtime.policy import resolve_subagent_route
 from lib.runtime.subagents.controller import SubAgentRuntimeController

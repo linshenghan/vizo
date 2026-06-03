@@ -152,31 +152,8 @@ class PasswordManager:
 
     @staticmethod
     def check_reset_on_startup(project_root: Path):
-        """启动时: WEB_CONSOLE_TOKEN 环境变量 + 无 hash 文件 → 设置初始密码
-
-        逻辑：
-        - hash 文件不存在 + TOKEN 存在 → 创建初始密码（首次部署）
-        - hash 文件已存在 → 跳过（用户已设密码，不覆盖）
-
-        如需强制重置，删除 .vizo/web_console_password.hash 后重启。
-        """
-        if not bcrypt:
-            return
-        token = os.environ.get('WEB_CONSOLE_TOKEN', '')
-        if not token:
-            return
-        hash_path = write_data_path("web_console_password.hash", project_root=project_root)
-        if hash_path.exists():
-            # 用户已有密码，不覆盖
-            return
-        new_hash = bcrypt.hashpw(token.encode('utf-8'), bcrypt.gensalt(rounds=12))
-        hash_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = hash_path.with_suffix('.tmp')
-        with open(tmp, 'wb') as f:
-            f.write(new_hash + b'\n')
-        os.rename(str(tmp), str(hash_path))
-        os.chmod(str(hash_path), 0o600)
-        logger.info("已通过 WEB_CONSOLE_TOKEN 设置初始密码")
+        """Legacy no-op: Web Console password login has been removed."""
+        return
 
 
 import json
@@ -2822,7 +2799,7 @@ INITIALIZED_FILE = _Path(
 class SetupWizard:
     """首次运行引导：检测是否需要引导 + 管理引导完成状态"""
 
-    def __init__(self, config: dict, password_manager: PasswordManager):
+    def __init__(self, config: dict, password_manager: Optional[PasswordManager] = None):
         self._config = config
         self._password_mgr = password_manager
 
@@ -2831,10 +2808,9 @@ class SetupWizard:
         # 1. 已初始化标记存在 → 非首次
         if INITIALIZED_FILE.exists():
             return False
-        # 2. 密码已设置 AND API Key 已配置 → 非首次
-        has_password = self._password_mgr.has_password()
+        # 2. API Key 已配置 → 非首次；控制台登录已移除，不再要求管理密码
         has_api_key = self._has_api_key()
-        if has_password and has_api_key:
+        if has_api_key:
             return False
         return True
 
@@ -2846,8 +2822,8 @@ class SetupWizard:
         return bool(api_key) and not is_placeholder(api_key)
 
     def needs_password_step(self) -> bool:
-        """是否需要密码设置步骤"""
-        return not self._password_mgr.has_password()
+        """控制台登录已移除，引导页不再设置密码。"""
+        return False
 
     def complete(self):
         """标记引导完成"""
@@ -2970,28 +2946,10 @@ body {
   <div class="steps">
     <div class="step-dot active" id="dot-0"></div>
     <div class="step-dot" id="dot-1"></div>
-    <div class="step-dot" id="dot-2"></div>
   </div>
 
-  <!-- Step 1: Password -->
+  <!-- Step 1: API Key -->
   <div class="step-panel active" id="step-0">
-    <div class="step-title">设置管理密码</div>
-    <div class="step-desc">此密码用于登录 Web Console，至少 8 位。</div>
-    <div class="field">
-      <label>密码</label>
-      <input type="password" id="setup-pwd" placeholder="输入密码 (至少 8 位)" autocomplete="new-password">
-    </div>
-    <div class="field">
-      <label>确认密码</label>
-      <input type="password" id="setup-pwd2" placeholder="再次输入密码">
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="setupPassword()">下一步</button>
-    </div>
-  </div>
-
-  <!-- Step 2: API Key -->
-  <div class="step-panel" id="step-1">
     <div class="step-title">配置 API 连接</div>
     <div class="step-desc">配置主会话使用的 API，支持 Claude 官方、Anthropic 兼容接口和 OpenAPI 入口。</div>
     <div class="field">
@@ -3003,14 +2961,13 @@ body {
       <input type="text" id="setup-baseurl" value="https://api.anthropic.com" autocomplete="off">
     </div>
     <div class="btn-row">
-      <button class="btn btn-secondary" onclick="prevStep()">上一步</button>
       <button class="btn btn-primary" onclick="setupApiKey()">下一步</button>
     </div>
     <a class="skip-link" onclick="nextStep()">跳过，稍后配置</a>
   </div>
 
-  <!-- Step 3: Done -->
-  <div class="step-panel" id="step-2">
+  <!-- Step 2: Done -->
+  <div class="step-panel" id="step-1">
     <div class="step-title">设置完成</div>
     <div class="step-desc">你已完成基础配置，可以进入控制台继续使用 Vizo。</div>
     <div class="btn-row">
@@ -3021,7 +2978,7 @@ body {
 <div class="toast" id="toast"></div>
 <script>
 let _step = {{initial_step}};
-const TOTAL = 3;
+const TOTAL = 2;
 
 function showStep(n) {
   _step = n;
@@ -3041,23 +2998,6 @@ function toast(msg, type) {
   el.textContent = msg;
   el.className = 'toast show ' + type;
   setTimeout(() => el.classList.remove('show'), 3000);
-}
-
-async function setupPassword() {
-  const p1 = document.getElementById('setup-pwd').value;
-  const p2 = document.getElementById('setup-pwd2').value;
-  if (p1.length < 8) { toast('密码至少 8 位', 'error'); return; }
-  if (p1 !== p2) { toast('两次密码不一致', 'error'); return; }
-  try {
-    const r = await fetch('/vizo/console/setup/password', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({password: p1})
-    });
-    const d = await r.json();
-    if (d.success) { toast('密码设置成功', 'success'); nextStep(); }
-    else { toast(d.error || '设置失败', 'error'); }
-  } catch(e) { toast('网络错误', 'error'); }
 }
 
 async function setupApiKey() {
@@ -3100,7 +3040,7 @@ showStep(_step);
 class SetupHandler:
     """首次运行引导页的 HTTP 请求处理器"""
 
-    def __init__(self, setup_wizard: SetupWizard, password_manager: PasswordManager):
+    def __init__(self, setup_wizard: SetupWizard, password_manager: Optional[PasswordManager] = None):
         self._wizard = setup_wizard
         self._password_mgr = password_manager
 
@@ -3109,27 +3049,8 @@ class SetupHandler:
         from aiohttp import web
         if not self._wizard.is_first_run():
             raise web.HTTPFound("/vizo/console")
-        initial_step = 0 if self._wizard.needs_password_step() else 1
-        html = SETUP_HTML.replace("{{initial_step}}", str(initial_step))
+        html = SETUP_HTML.replace("{{initial_step}}", "0")
         return web.Response(text=html, content_type="text/html")
-
-    async def handle_setup_password(self, request):
-        """POST /vizo/console/setup/password — 设置初始密码"""
-        from aiohttp import web
-        if not self._wizard.is_first_run():
-            return web.json_response({"success": False, "error": "系统已初始化"})
-        try:
-            data = await request.json()
-        except Exception:
-            return web.json_response({"success": False, "error": "请求格式错误"})
-        password = data.get("password", "")
-        if len(password) < 8:
-            return web.json_response({"success": False, "error": "密码长度不能少于 8 位"})
-        try:
-            self._password_mgr.set_password(password)
-        except RuntimeError as e:
-            return web.json_response({"success": False, "error": str(e)})
-        return web.json_response({"success": True})
 
     async def handle_setup_apikey(self, request):
         """POST /vizo/console/setup/apikey — 设置 API Key + Base URL"""
@@ -3194,16 +3115,4 @@ class SetupHandler:
         if not self._wizard.is_first_run():
             return web.json_response({"success": False, "error": "系统已初始化"})
         self._wizard.complete()
-        resp_data = {"success": True, "redirect": "/vizo/console"}
-        # 如果密码已设置，返回登录 Cookie
-        if self._password_mgr.has_password():
-            cookie_val = self._password_mgr.get_cookie_value()
-            if cookie_val:
-                resp = web.json_response(resp_data)
-                resp.set_cookie(
-                    "vizo_web_token", cookie_val,
-                    httponly=True, path="/vizo",
-                    max_age=30 * 86400, samesite="Lax",
-                )
-                return resp
-        return web.json_response(resp_data)
+        return web.json_response({"success": True, "redirect": "/vizo/console"})

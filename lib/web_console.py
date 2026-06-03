@@ -2,16 +2,15 @@
 Web Console handler for Vizo.
 
 Provides browser-based Claude Code terminal access via:
-- Token authentication (Cookie-based)
 - xterm.js SPA frontend
 - WebSocket ↔ PTY bridge
 - Session CRUD API
 - Vizo task status API (P1)
 """
 
-import hashlib
 import json
 import logging
+import mimetypes
 import os
 import asyncio
 import inspect
@@ -19,7 +18,7 @@ import re
 from datetime import datetime, timezone
 from typing import Callable
 
-from agent_runner import AgentError
+from vizo_core.agent_runner import AgentError
 from aiohttp import web, WSMsgType
 from pathlib import Path
 from lib.config_loader import load_config
@@ -35,7 +34,7 @@ from lib.runtime.diagnostics import build_runtime_diagnostics_snapshot
 from lib.runtime.sessions.controller import MainSessionController
 from lib.project_bootstrap import bootstrap_serena_project
 from lib.task_titles import summarize_task_title
-from state_manager import check_task_code_changes
+from vizo_core.state_manager import check_task_code_changes
 
 _LIB_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _LIB_DIR.parent
@@ -44,132 +43,6 @@ _CONTAINER_MAINLINE_ROOT = "/app"
 
 
 logger = logging.getLogger("web_console")
-
-
-# ============================================================
-# Login Page HTML
-# ============================================================
-LOGIN_HTML = """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vizo Web Console - Login</title>
-<script>
-(function(){try{var t=localStorage.getItem('opus_theme');
-if(t==='light')document.documentElement.setAttribute('data-theme','light');
-}catch(e){}})();
-</script>
-<style>
-:root {
-  --bg-primary: #0a0e17;
-  --bg-secondary: #111827;
-  --bg-input: #0f1923;
-  --text-primary: #e2e8f0;
-  --text-muted: #64748b;
-  --accent: #38bdf8;
-  --purple: #a78bfa;
-  --red: #ef4444;
-  --border: #1e3a5f;
-  --font-size-2xs: 10px;
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-md: 13px;
-  --font-size-lg: 14px;
-  --font-size-xl: 16px;
-  --font-size-2xl: 20px;
-  --line-height-tight: 1.35;
-  --line-height-base: 1.5;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --radius-2xs: 3px;
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-pill: 999px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-[data-theme="light"] {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f7;
-  --bg-input: #f0f0f5;
-  --text-primary: #1d1d1f;
-  --text-muted: #aeaeb2;
-  --accent: #0071e3;
-  --purple: #7c3aed;
-  --red: #ef4444;
-  --border: rgba(0,0,0,0.12);
-  --shadow: 0 2px 16px rgba(0,0,0,0.08);
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
-  font-size: var(--font-size-md);
-  line-height: var(--line-height-base);
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.auth-box {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: calc(var(--space-6) + var(--space-2));
-  width: 400px;
-  text-align: center;
-  box-shadow: var(--shadow);
-}
-.auth-logo {
-  font-size: var(--font-size-2xl);
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
-}
-.auth-subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: var(--font-size-sm); }
-.auth-input {
-  width: 100%; padding: 0.8rem 1rem;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text-primary);
-  font-size: var(--font-size-lg); outline: none; transition: border-color var(--transition);
-}
-.auth-input:focus { border-color: var(--accent); }
-.auth-input::placeholder { color: var(--text-muted); }
-.auth-btn {
-  width: 100%; padding: 0.8rem;
-  background: linear-gradient(135deg, #0369a1, #0284c7);
-  border: none; border-radius: var(--radius);
-  color: white; font-size: var(--font-size-lg); font-weight: 600;
-  cursor: pointer; margin-top: 1rem;
-  transition: all var(--transition);
-}
-.auth-btn:hover { background: linear-gradient(135deg, #0284c7, #0ea5e9); transform: translateY(-1px); }
-.auth-error { color: var(--red); font-size: var(--font-size-sm); margin-top: 0.8rem; display: {{error_display}}; }
-</style>
-</head>
-<body>
-<div class="auth-box">
-  <div class="auth-logo">维造 Vizo</div>
-  <div class="auth-subtitle">Web Console &mdash; 新架构隔离环境</div>
-  <form method="POST" action="/vizo/console/login">
-    <input type="password" class="auth-input" name="token" placeholder="请输入密码..." autocomplete="off" autofocus>
-    <button type="submit" class="auth-btn">登录</button>
-  </form>
-  <div class="auth-error">{{error_message}}</div>
-</div>
-</body>
-</html>"""
 
 
 # ============================================================
@@ -2547,7 +2420,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
           <button class="settings-nav-item" data-section="role-models" onclick="switchSettingsSection('role-models')">角色配置</button>
           <button class="settings-nav-item" data-section="mcp-tools" onclick="switchSettingsSection('mcp-tools')">MCP 工具</button>
           <button class="settings-nav-item" data-section="network" onclick="switchSettingsSection('network')">网络配置</button>
-          <button class="settings-nav-item" data-section="password" onclick="switchSettingsSection('password')">控制台密码</button>
         </div>
         <div class="settings-main">
           <div class="settings-panel active" data-section="main-session">
@@ -2724,31 +2596,6 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
             <div class="settings-page-actions">
               <span class="settings-actions-state clean" id="settings-state-network">未修改</span>
               <button id="save-network-btn" class="settings-save" onclick="saveDomain()">保存网络配置</button>
-            </div>
-          </div>
-
-          <div class="settings-panel" data-section="password">
-            <div class="settings-panel-scroll">
-              <div class="settings-panel-title">控制台密码</div>
-              <div class="settings-panel-desc">修改后当前设备不受影响，其他已登录设备需要重新登录。</div>
-              <div class="settings-subsection">
-                <div class="settings-field">
-                  <label>旧密码</label>
-                  <input type="password" id="old-password" placeholder="当前密码或访问令牌" autocomplete="current-password">
-                </div>
-                <div class="settings-field">
-                  <label>新密码</label>
-                  <input type="password" id="new-password" placeholder="至少 8 位" autocomplete="new-password">
-                </div>
-                <div class="settings-field" style="margin-bottom:0">
-                  <label>确认新密码</label>
-                  <input type="password" id="confirm-password" placeholder="再次输入新密码" autocomplete="new-password">
-                </div>
-              </div>
-            </div>
-            <div class="settings-page-actions">
-              <span class="settings-actions-state clean" id="settings-state-password">未填写</span>
-              <button id="save-password-btn" class="settings-save" onclick="changePassword()">修改控制台密码</button>
             </div>
           </div>
         </div>
@@ -3114,7 +2961,7 @@ const LANGS = {
     sessionClosedMsg: '会话已关闭，请选择或新建会话。',
     sessionRunningConfirm: '该会话仍在运行，确定关闭？',
     // Toasts
-    authFailed: '认证失败，正在跳转到登录页...',
+    authFailed: '连接未授权，请刷新控制台重试',
     sessionTakeover: '会话已被另一个窗口接管',
     sessionNotFound: '会话不存在',
     replayedBuffer: '已回放缓冲区内容',
@@ -3382,7 +3229,7 @@ const LANGS = {
     connectingToSession: 'Connecting to session...',
     sessionClosedMsg: 'Session closed. Select or create a new session.',
     sessionRunningConfirm: 'This session is still running. Close it?',
-    authFailed: 'Authentication failed. Redirecting to login...',
+    authFailed: 'Connection unauthorized. Refresh the console and try again.',
     sessionTakeover: 'Session taken over by another window',
     sessionNotFound: 'Session not found',
     replayedBuffer: 'Replayed buffered output',
@@ -3904,7 +3751,7 @@ function connectWS(sessionId) {
 
     if (event.code === 4001) {
       showToast(t('authFailed'), 'error');
-      setTimeout(() => { location.href = '/vizo/console/login'; }, 2000);
+      updateConnectionStatus('disconnected');
       return;
     }
     if (event.code === 4002) {
@@ -7657,8 +7504,7 @@ const _settingsSectionMeta = {
   'main-session': {buttonId: 'save-main-session-btn', stateId: 'settings-state-main-session', pendingText: '保存中...'},
   'external-models': {buttonId: 'save-external-models-btn', stateId: 'settings-state-external-models', pendingText: '保存中...'},
   'role-models': {buttonId: 'save-role-models-btn', stateId: 'settings-state-role-models', pendingText: '保存中...', secondaryButtonId: 'reset-role-models-btn'},
-  'network': {buttonId: 'save-network-btn', stateId: 'settings-state-network', pendingText: '保存中...'},
-  'password': {buttonId: 'save-password-btn', stateId: 'settings-state-password', pendingText: '修改中...'}
+  'network': {buttonId: 'save-network-btn', stateId: 'settings-state-network', pendingText: '保存中...'}
 };
 
 function _sameStringArray(a, b) {
@@ -7681,7 +7527,6 @@ function _getSettingsButton(section) {
 }
 
 function _getSettingsStateText(section, dirty) {
-  if (section === 'password') return dirty ? '待保存密码修改' : '未填写';
   if (section === 'mcp-tools') return '开关会立即生效';
   return dirty ? '有未保存修改' : '未修改';
 }
@@ -7756,19 +7601,12 @@ function _isNetworkDirty() {
   return input.value.trim() !== (input.dataset.orig || '');
 }
 
-function _isPasswordDirty() {
-  return ['old-password', 'new-password', 'confirm-password'].some(function(id) {
-    return (document.getElementById(id)?.value || '').trim() !== '';
-  });
-}
-
 function _isSettingsSectionDirty(section) {
   if (section === 'main-session') return _isMainSessionDirty();
   if (section === 'external-models') return _isExternalModelsDirty();
   if (section === 'role-models') return _isRoleModelsDirty();
   if (section === 'mcp-tools') return _isMcpToolsDirty();
   if (section === 'network') return _isNetworkDirty();
-  if (section === 'password') return _isPasswordDirty();
   return false;
 }
 
@@ -7816,7 +7654,6 @@ function _saveCurrentSettingsSection() {
   if (_currentSettingsSection === 'external-models') return saveExternalModelsConfig();
   if (_currentSettingsSection === 'role-models') return saveModels();
   if (_currentSettingsSection === 'network') return saveDomain();
-  if (_currentSettingsSection === 'password') return changePassword();
 }
 
 function _reloadSettingsDrafts() {
@@ -7848,10 +7685,6 @@ function _reloadSettingsDrafts() {
   }
   const mcpList = document.getElementById('mcp-service-list');
   if (mcpList) mcpList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem">加载中...</div>';
-  ['old-password', 'new-password', 'confirm-password'].forEach(function(id) {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
   ['mcp-import-json', 'mcp-manual-name', 'mcp-manual-command', 'mcp-manual-args', 'mcp-manual-env'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -7868,7 +7701,6 @@ function _reloadSettingsDrafts() {
   loadSavedConnections();
   loadExternalModels();
   loadDomainStatus();
-  _refreshSettingsSectionState('password');
 }
 
 function _detectCurrentMainView() {
@@ -7925,33 +7757,6 @@ function closeSettings() {
   _settingsNeedsReload = true;
   _modelsLoaded = false;
   _showMainView(_settingsReturnView || 'terminal');
-}
-
-async function changePassword() {
-  const oldPwd = document.getElementById('old-password').value;
-  const newPwd = document.getElementById('new-password').value;
-  const confirmPwd = document.getElementById('confirm-password').value;
-  if (!oldPwd || !newPwd) { showToast('请填写完整信息', 'error'); return; }
-  if (newPwd.length < 8) { showToast('新密码至少 8 位', 'error'); return; }
-  if (newPwd !== confirmPwd) { showToast('两次密码不一致', 'error'); return; }
-  _setSettingsActionLoading('password', true);
-  try {
-    const r = await fetch('/vizo/console/api/settings/password', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({old_password: oldPwd, new_password: newPwd})
-    });
-    const d = await r.json();
-    if (d.success) {
-      showToast('密码修改成功，其他设备需重新登录', 'success');
-      ['old-password','new-password','confirm-password'].forEach(
-        id => document.getElementById(id).value = '');
-      _refreshSettingsSectionState('password');
-    } else {
-      showToast(d.error || '修改失败', 'error');
-    }
-  } catch(e) { showToast('网络错误', 'error'); }
-  finally { _setSettingsActionLoading('password', false); }
 }
 
 // ======================== Settings Section Switch ========================
@@ -8039,7 +7844,7 @@ async function loadModels() {
       fetch('/vizo/console/api/settings/models'),
       fetch('/vizo/console/api/settings/mcp-permissions')
     ]);
-    if (r1.status === 401) { showToast('请先登录', 'error'); return; }
+    if (r1.status === 401) { showToast('请求未授权', 'error'); return; }
     _modelsData = await r1.json();
     _mcpData = r2.ok ? await r2.json() : null;
     _modelsLoaded = true;
@@ -8394,7 +8199,7 @@ async function loadMcpTools() {
   const listEl = document.getElementById('mcp-service-list');
   try {
     const res = await fetch('/vizo/console/api/settings/mcp-services');
-    if (res.status === 401) { showToast('请先登录', 'error'); return; }
+    if (res.status === 401) { showToast('请求未授权', 'error'); return; }
     _mcpServicesData = await res.json();
     if (_lastChromeStatus) _syncChromeStatusIntoMcpTools(_lastChromeStatus, false);
     _mcpServicesLoaded = true;
@@ -8581,7 +8386,7 @@ async function loadApiKeyStatus() {
   const el = document.getElementById('apikey-status');
   try {
     const r = await fetch('/vizo/console/api/settings/apikey');
-    if (r.status === 401) { el.textContent = '请先登录'; return; }
+    if (r.status === 401) { el.textContent = '请求未授权'; return; }
     const d = await r.json();
     _currentMainConnectionId = d.connection_id || 'main_session';
     const apikeyEl = document.getElementById('new-apikey');
@@ -9469,7 +9274,7 @@ async function loadExternalModels() {
   const el = document.getElementById('ext-models-list');
   try {
     const r = await fetch('/vizo/console/api/settings/external-models');
-    if (r.status === 401) { el.innerHTML = '<div style="color:var(--danger)">请先登录</div>'; return; }
+    if (r.status === 401) { el.innerHTML = '<div style="color:var(--danger)">请求未授权</div>'; return; }
     const data = await r.json();
     const models = data.models || data;
     _extModelsData = models;
@@ -9723,7 +9528,7 @@ async function loadDomainStatus() {
   const el = document.getElementById('domain-status');
   try {
     const r = await fetch('/vizo/console/api/settings/domain');
-    if (r.status === 401) { el.textContent = '请先登录'; return; }
+    if (r.status === 401) { el.textContent = '请求未授权'; return; }
     const d = await r.json();
     _domainLoaded = true;
     let html = '';
@@ -9762,7 +9567,7 @@ async function saveDomain() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({custom_domain: cleanDomain})
     });
-    if (r.status === 401) { showToast('请先登录', 'error'); return; }
+    if (r.status === 401) { showToast('请求未授权', 'error'); return; }
     const d = await r.json();
     if (d.success) {
       showToast('保存成功，有效 URL: ' + d.effective_url, 'success');
@@ -10153,8 +9958,7 @@ async function agentApi(url, options) {
     headers: {'Content-Type': 'application/json'}
   }, options || {}));
   if (resp.status === 401) {
-    window.location.href = '/vizo/console/login';
-    return null;
+    throw new Error('Unauthorized');
   }
   var data = await resp.json();
   if (!resp.ok) throw new Error(data.error || 'HTTP ' + resp.status);
@@ -10962,9 +10766,6 @@ class WebConsoleHandler:
         self._config = config
         self._get_redis = redis_getter
         self._main_sessions = MainSessionController(config, project_root=_PROJECT_ROOT)
-        self._token = config.get("token", "")
-        self._token_hash = hashlib.sha256(self._token.encode()).hexdigest() if self._token else ""
-        self._cookie_max_age = config.get("cookie_max_age_days", 30) * 86400
         self._password_mgr = password_manager
         self._connection_auth_jobs: dict[str, dict] = {}
 
@@ -11002,15 +10803,8 @@ class WebConsoleHandler:
         )
 
     def _check_auth(self, request) -> bool:
-        """Verify authentication cookie (bcrypt priority, token fallback)."""
-        cookie_val = request.cookies.get("vizo_web_token", "")
-        if not cookie_val:
-            return False
-        # bcrypt 优先
-        if self._password_mgr and self._password_mgr.has_password():
-            return cookie_val == self._password_mgr.get_cookie_value()
-        # 降级: 原有 token 验证
-        return cookie_val == self._token_hash and bool(self._token_hash)
+        """Console access is open; legacy auth guards remain as no-op checks."""
+        return True
 
     def _resolve_active_session_target_model(self) -> tuple[bool, str, str]:
         """Resolve the safe Claude alias to apply inside the active session."""
@@ -11332,91 +11126,7 @@ class WebConsoleHandler:
             payload["error"] = login_error
         return payload
 
-    # -------------------- Login --------------------
-
-    async def handle_login_page(self, request):
-        """GET /vizo/console/login — render login page."""
-        html = LOGIN_HTML.replace("{{error_display}}", "none").replace("{{error_message}}", "")
-        return web.Response(text=html, content_type="text/html")
-
-    async def handle_login(self, request):
-        """POST /vizo/console/login — verify token and set cookie."""
-        data = await request.post()
-        password = data.get("token", "")  # 表单字段名保持 "token"
-
-        # bcrypt 优先
-        if self._password_mgr and self._password_mgr.has_password():
-            if self._password_mgr.verify_password(password):
-                resp = web.HTTPSeeOther("/vizo/console")
-                resp.set_cookie(
-                    "vizo_web_token",
-                    self._password_mgr.get_cookie_value(),
-                    httponly=True,
-                    path="/vizo",
-                    max_age=self._cookie_max_age,
-                    samesite="Lax",
-                )
-                return resp
-            html = LOGIN_HTML.replace("{{error_display}}", "block").replace(
-                "{{error_message}}", "密码错误，请重试")
-            return web.Response(text=html, content_type="text/html")
-
-        # 降级: 原有 token 验证
-        if password == self._token and self._token:
-            resp = web.HTTPSeeOther("/vizo/console")
-            resp.set_cookie(
-                "vizo_web_token",
-                self._token_hash,
-                httponly=True,
-                path="/vizo",
-                max_age=self._cookie_max_age,
-                samesite="Lax",
-            )
-            return resp
-
-        html = LOGIN_HTML.replace("{{error_display}}", "block").replace(
-            "{{error_message}}", "Invalid token, please try again"
-        )
-        return web.Response(text=html, content_type="text/html")
-
     # -------------------- Settings API --------------------
-
-    async def handle_settings_password(self, request):
-        """POST /vizo/console/api/settings/password — 修改密码"""
-        if not self._check_auth(request):
-            return web.json_response({"error": "未授权"}, status=401)
-        if not self._password_mgr:
-            return web.json_response({"error": "密码管理不可用"}, status=500)
-
-        try:
-            data = await request.json()
-        except Exception:
-            return web.json_response({"error": "请求格式错误"}, status=400)
-
-        old_password = data.get("old_password", "")
-        new_password = data.get("new_password", "")
-        if not old_password or not new_password:
-            return web.json_response({"error": "请填写完整信息"}, status=400)
-        if len(new_password) < 8:
-            return web.json_response({"error": "新密码至少 8 位"}, status=400)
-
-        # 验证旧密码
-        if self._password_mgr.has_password():
-            if not self._password_mgr.verify_password(old_password):
-                return web.json_response({"error": "旧密码不正确"}, status=400)
-        else:
-            # 降级: 验证 config token
-            if old_password != self._token or not self._token:
-                return web.json_response({"error": "旧密码不正确"}, status=400)
-
-        # 写入新密码（asyncio.Lock 保护并发）
-        try:
-            async with self._password_mgr._lock:
-                self._password_mgr.set_password(new_password)
-        except RuntimeError as e:
-            return web.json_response({"error": str(e)}, status=500)
-
-        return web.json_response({"success": True})
 
     async def handle_settings_models_get(self, request):
         """GET /vizo/console/api/settings/models — 读取模型配置"""
@@ -12658,17 +12368,13 @@ class WebConsoleHandler:
     # -------------------- Console SPA --------------------
 
     async def handle_console(self, request):
-        """GET /vizo/console — serve SPA (auth required)."""
-        if not self._check_auth(request):
-            raise web.HTTPFound("/vizo/console/login")
+        """GET /vizo/console — serve SPA."""
         return web.Response(
             text=WEB_CONSOLE_HTML, content_type="text/html",
             headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
     async def handle_dialogue_console(self, request):
-        """GET /vizo/console/dialogue — serve Dialogue Console (auth required)."""
-        if not self._check_auth(request):
-            raise web.HTTPFound("/vizo/console/login")
+        """GET /vizo/console/dialogue — serve Dialogue Console."""
         return web.Response(
             text=render_dialogue_console_html(),
             content_type="text/html",
@@ -13758,31 +13464,95 @@ class WebConsoleHandler:
 
         return web.json_response({"tasks": results})
 
+    @staticmethod
+    def _find_unique_project_file_by_basename(project_real: Path, filename: str):
+        name = Path(str(filename or "")).name
+        if not name or name != str(filename or "") or name in {".", ".."}:
+            return None
+        ignored_dirs = {
+            ".git",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".serena",
+            ".serena-codex-home",
+            ".venv",
+            "__pycache__",
+            "node_modules",
+            "venv",
+        }
+        matches = []
+        try:
+            for root, dirs, files in os.walk(project_real):
+                dirs[:] = [item for item in dirs if item not in ignored_dirs]
+                if name not in files:
+                    continue
+                matches.append(Path(root) / name)
+                if len(matches) > 1:
+                    return None
+        except OSError:
+            return None
+        return matches[0] if len(matches) == 1 else None
+
+    @staticmethod
+    def _allow_project_file_basename_fallback(request, rel_path: str) -> bool:
+        flag = str(request.query.get("fallback_basename", "")).lower()
+        if flag not in {"1", "true", "yes"}:
+            return False
+        value = str(rel_path or "").strip()
+        if not value or "/" in value or "\\" in value or value in {".", ".."}:
+            return False
+        return Path(value).name == value
+
+    def _resolve_project_file_target(self, request):
+        name = request.match_info["name"]
+        rel_path = request.query.get("path", "")
+        try:
+            project_info = self._load_projects_config().get(name)
+            if not project_info:
+                return None, rel_path, web.json_response({"error": f"项目 '{name}' 不存在"}, status=404)
+            project_path = Path(project_info["path"])
+        except Exception as e:
+            return None, rel_path, web.json_response({"error": str(e)}, status=500)
+
+        target = (project_path / rel_path).resolve()
+        project_real = project_path.resolve()
+        try:
+            target.relative_to(project_real)
+        except ValueError:
+            return None, rel_path, web.json_response({"error": "路径越界"}, status=403)
+
+        if not target.exists() and self._allow_project_file_basename_fallback(request, rel_path):
+            fallback = self._find_unique_project_file_by_basename(project_real, rel_path)
+            if fallback is not None:
+                fallback_target = fallback.resolve()
+                try:
+                    fallback_rel_path = fallback_target.relative_to(project_real).as_posix()
+                except ValueError:
+                    fallback_rel_path = ""
+                if fallback_rel_path:
+                    target = fallback_target
+                    rel_path = fallback_rel_path
+
+        if not target.exists():
+            return None, rel_path, web.json_response({"error": "路径不存在"}, status=404)
+        return target, rel_path, None
+
+    @staticmethod
+    def _project_file_content_type(path: Path) -> str:
+        content_type = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+        if content_type.startswith("text/"):
+            return content_type + "; charset=utf-8"
+        return content_type
+
     async def handle_project_files(self, request):
         """GET /vizo/console/api/projects/{name}/files - browse files in a project."""
         if not self._check_auth(request):
             return web.json_response({"error": "Unauthorized"}, status=401)
 
-        name = request.match_info["name"]
-        rel_path = request.query.get("path", "")
-
-        # Get project path from config
-        try:
-            project_info = self._load_projects_config().get(name)
-            if not project_info:
-                return web.json_response({"error": f"项目 '{name}' 不存在"}, status=404)
-            project_path = Path(project_info["path"])
-        except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
-
-        # Build target path and security check
-        target = (project_path / rel_path).resolve()
-        project_real = project_path.resolve()
-        if not str(target).startswith(str(project_real)):
-            return web.json_response({"error": "路径越界"}, status=403)
-
-        if not target.exists():
-            return web.json_response({"error": "路径不存在"}, status=404)
+        target, rel_path, error_response = self._resolve_project_file_target(request)
+        if error_response is not None:
+            return error_response
 
         if target.is_dir():
             entries = []
@@ -13811,6 +13581,8 @@ class WebConsoleHandler:
                     return web.json_response({
                         "type": "file",
                         "name": file_name,
+                        "path": rel_path,
+                        "content_type": self._project_file_content_type(target),
                         "size": file_size,
                         "content": content,
                     })
@@ -13821,9 +13593,27 @@ class WebConsoleHandler:
             return web.json_response({
                 "type": "file",
                 "name": file_name,
+                "path": rel_path,
+                "content_type": self._project_file_content_type(target),
                 "size": file_size,
                 "binary": True,
             })
+
+    async def handle_project_file_raw(self, request):
+        """GET /vizo/console/api/projects/{name}/files/raw - serve a project file."""
+        if not self._check_auth(request):
+            return web.json_response({"error": "Unauthorized"}, status=401)
+
+        target, _rel_path, error_response = self._resolve_project_file_target(request)
+        if error_response is not None:
+            return error_response
+        if target.is_dir():
+            return web.json_response({"error": "路径是目录"}, status=400)
+
+        response = web.FileResponse(target)
+        response.content_type = self._project_file_content_type(target)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
 
     # -------------------- Vizo API (P1) --------------------
 

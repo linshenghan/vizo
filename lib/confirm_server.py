@@ -43,7 +43,7 @@ from lib.paths import (
     task_dir as resolve_task_dir,
 )
 from lib.task_titles import summarize_task_title
-from state_manager import check_task_code_changes
+from vizo_core.state_manager import check_task_code_changes
 
 _LIB_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _LIB_DIR.parent
@@ -885,14 +885,9 @@ class ConfirmServer:
         self._tunnel_url: Optional[str] = None
         self.logger = logging.getLogger("confirm_server")
 
-        # Password Manager (before Web Console init)
+        # Console password login has been removed; keep the attribute for older
+        # call sites that still accept a password manager argument.
         self._password_mgr = None
-        try:
-            from lib.settings_handler import PasswordManager
-            PasswordManager.check_reset_on_startup(_PROJECT_ROOT)
-            self._password_mgr = PasswordManager(_PROJECT_ROOT)
-        except Exception as e:
-            self.logger.warning("PasswordManager init failed: %s", e)
 
         # Web Console (conditional initialization)
         self._pty_manager = None
@@ -944,16 +939,7 @@ class ConfirmServer:
             return None
 
     def _check_api_auth(self, request) -> bool:
-        """验证控制信号 API 的认证（复用 Web Console 的认证机制）。
-        防止子代理通过 curl 调用控制 API 导致自身任务被意外终止。
-        """
-        if self._web_console:
-            return self._web_console._check_auth(request)
-        # 无 Web Console 时，检查 password manager
-        if self._password_mgr and self._password_mgr.has_password():
-            cookie_val = request.cookies.get("vizo_web_token", "")
-            return cookie_val == self._password_mgr.get_cookie_value()
-        # 无密码保护时放行（开发/测试环境）
+        """Console password login has been removed; API auth is delegated externally."""
         return True
 
     async def _get_redis(self) -> aioredis.Redis:
@@ -1291,7 +1277,7 @@ class ConfirmServer:
 
     def _generate_confirm_buttons(self, button_set: str) -> str:
         """根据 button_set 配置生成确认页面的按钮 HTML"""
-        from user_interface import BUTTON_SET_CONFIGS
+        from vizo_core.user_interface import BUTTON_SET_CONFIGS
         config = BUTTON_SET_CONFIGS.get(button_set, BUTTON_SET_CONFIGS["generic_confirm"])
         parts = []
         for btn in config["buttons"]:
@@ -1315,7 +1301,7 @@ class ConfirmServer:
     @staticmethod
     def _button_set_has_feedback(button_set: str) -> bool:
         """检查 button_set 是否包含补充意见按钮"""
-        from user_interface import BUTTON_SET_CONFIGS
+        from vizo_core.user_interface import BUTTON_SET_CONFIGS
         config = BUTTON_SET_CONFIGS.get(button_set, BUTTON_SET_CONFIGS["generic_confirm"])
         return any(btn["action"] == "f" for btn in config["buttons"])
 
@@ -3173,7 +3159,7 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
             )
         try:
             from lib.config_loader import load_config
-            from opus import handle_create_agent
+            from vizo_core.opus import handle_create_agent
 
             config = load_config()
             result = await handle_create_agent(
@@ -3496,15 +3482,14 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
         # Setup Wizard (first_run detection)
         setup_wizard = None
         setup_handler = None
-        if self._password_mgr:
-            try:
-                from lib.config_loader import load_config as _lc
-                from lib.settings_handler import SetupWizard, SetupHandler
-                _cfg = _lc()
-                setup_wizard = SetupWizard(_cfg, self._password_mgr)
-                setup_handler = SetupHandler(setup_wizard, self._password_mgr)
-            except Exception as e:
-                self.logger.warning("SetupWizard init failed: %s", e)
+        try:
+            from lib.config_loader import load_config as _lc
+            from lib.settings_handler import SetupWizard, SetupHandler
+            _cfg = _lc()
+            setup_wizard = SetupWizard(_cfg)
+            setup_handler = SetupHandler(setup_wizard)
+        except Exception as e:
+            self.logger.warning("SetupWizard init failed: %s", e)
 
         def _path_prefix(path: str) -> str:
             if path.startswith("/vizo/") or path == "/vizo":
@@ -3550,18 +3535,10 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
         async def first_run_middleware(request, handler):
             prefix = _path_prefix(request.path)
             setup_path = f"{prefix}/console/setup" if prefix else "/console/setup"
-            login_paths = {
-                "/console/login",
-                "/m/login",
-                "/vizo/console/login",
-                "/vizo/m/login",
-            }
             if (
                 request.path.startswith("/console/setup")
                 or request.path.startswith("/vizo/console/setup")
             ):
-                return await handler(request)
-            if request.path in login_paths:
                 return await handler(request)
             if not any(
                 request.path.startswith(prefix)
@@ -3707,8 +3684,6 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
             from lib.dialogue_console import render_dialogue_workbench_html
 
             async def _handle_dialogue_agents_workbench(request):
-                if not wc._check_auth(request):
-                    raise web.HTTPFound("/vizo/console/login")
                 return web.Response(
                     text=render_dialogue_workbench_html("agents"),
                     content_type="text/html",
@@ -3716,8 +3691,6 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
                 )
 
             async def _handle_dialogue_settings_workbench(request):
-                if not wc._check_auth(request):
-                    raise web.HTTPFound("/vizo/console/login")
                 section = str(request.query.get("section") or "main-session")
                 return web.Response(
                     text=render_dialogue_workbench_html("settings", section=section),
@@ -3725,8 +3698,6 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
                     headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
                 )
 
-            _add_get("/vizo/console/login", wc.handle_login_page)
-            _add_post("/vizo/console/login", wc.handle_login)
             _add_get("/vizo/console/ws", wc.handle_ws)
             _add_get("/vizo/console/api/sessions", wc.handle_list_sessions)
             _add_post("/vizo/console/api/sessions", wc.handle_create_session)
@@ -3760,8 +3731,8 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
             _add_delete("/vizo/console/api/projects/{name}", wc.handle_delete_project)
             _add_get("/vizo/console/api/projects/{name}/tasks", wc.handle_project_tasks)
             _add_get("/vizo/console/api/tasks", wc.handle_all_tasks)
+            _add_get("/vizo/console/api/projects/{name}/files/raw", wc.handle_project_file_raw)
             _add_get("/vizo/console/api/projects/{name}/files", wc.handle_project_files)
-            _add_post("/vizo/console/api/settings/password", wc.handle_settings_password)
             _add_get("/vizo/console/api/settings/models", wc.handle_settings_models_get)
             _add_post("/vizo/console/api/settings/models", wc.handle_settings_models_post)
             _add_get("/vizo/console/api/settings/apikey", wc.handle_settings_apikey_get)
@@ -3795,7 +3766,6 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
             # Setup Wizard 路由（first_run 时可用）
             if setup_handler:
                 _add_get("/vizo/console/setup", setup_handler.handle_setup_page)
-                _add_post("/vizo/console/setup/password", setup_handler.handle_setup_password)
                 _add_post("/vizo/console/setup/apikey", setup_handler.handle_setup_apikey)
                 _add_post("/vizo/console/setup/complete", setup_handler.handle_setup_complete)
                 self.logger.info("Setup Wizard routes registered")
@@ -3821,8 +3791,6 @@ a{{color:#818cf8}}</style></head><body>{html_body}</body></html>"""
             mc = self._mobile_console
             _add_get("/vizo/m/manifest.json", mc.handle_pwa_manifest)
             _add_get("/vizo/m/sw.js", mc.handle_pwa_sw)
-            _add_get("/vizo/m/login", mc.handle_login_page)
-            _add_post("/vizo/m/login", mc.handle_login)
             _add_get("/vizo/m", mc.handle_console)
             self.logger.info("Mobile Console routes registered")
 
