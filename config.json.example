@@ -1,5 +1,5 @@
 {
-  "_comment": "Opus V6 配置文件模板 — 复制为 config.json 后按需填写",
+  "_comment": "配置文件模板 — 复制为 config.json 后按需填写",
   "version": "4.0",
   "custom_domain": "your-domain.example.com",
   "projects": {
