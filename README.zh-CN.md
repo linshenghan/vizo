@@ -212,25 +212,6 @@ python3 -m pytest tests/test_sync_public_repo.py
 python3 -m pytest tests/test_confirm_server_status.py
 ```
 
-## 公开仓库边界
-
-公开仓库通过白名单同步维护：
-
-```bash
-python3 scripts/sync_public_repo.py --target "$HOME/vizo-public" --dry-run
-python3 scripts/sync_public_repo.py --target "$HOME/vizo-public" --init-git
-```
-
-如果一个新文件需要公开发布，请把它加入 `PUBLIC_SYNC_MANIFEST.txt`。同步时，未列在该文件中的内容会从公开 checkout 中移除，显式保护的路径如 `.git` 除外。
-
-## 安全说明
-
-- 不要提交 `config.json`、`.env`、`.mcp.json`、任务状态、日志、本地记忆、用户创建的 Agent 或项目 checkout。
-- 复制 `config.json.example` 到生产环境前要先审查。它包含占位符和示例值，不是经过加固的生产策略。
-- 将 Web Console 暴露到非完全可信网络前，请先使用反向代理和 TLS。
-- 面向 localhost 之外部署时，请用反向代理、防火墙、VPN 或其他外部访问控制限制 Web Console 入口。
-- 广泛发布前请选择并添加许可证。没有许可证时，其他人可以查看代码，但不会获得明确的复用权利。
-
 ## 更多文档
 
 - [部署指南](docs/DEPLOYMENT.md)
