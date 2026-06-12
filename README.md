@@ -264,31 +264,6 @@ python3 -m pytest tests/test_sync_public_repo.py
 python3 -m pytest tests/test_confirm_server_status.py
 ```
 
-## Public Repository Boundary
-
-The public repository is maintained by a whitelist sync:
-
-```bash
-python3 scripts/sync_public_repo.py --target "$HOME/vizo-public" --dry-run
-python3 scripts/sync_public_repo.py --target "$HOME/vizo-public" --init-git
-```
-
-If a new file should be published, add it to `PUBLIC_SYNC_MANIFEST.txt`. Files
-not listed there are removed from the public checkout during sync, except for
-explicitly protected paths such as `.git`.
-
-## Security Notes
-
-- Do not commit `config.json`, `.env`, `.mcp.json`, task state, logs, local
-  memories, user-created agents, or project checkouts.
-- Review `config.json.example` before copying it into production. It contains
-  placeholders and example values, not hardened production policy.
-- Use a reverse proxy and TLS before exposing the Web Console to a network you
-  do not fully control.
-- Restrict Web Console network access with a reverse proxy, firewall, VPN, or
-  another external access-control layer when deploying beyond localhost.
-- Choose and add a license before publishing broadly. Without a license, others
-  can view the code but do not receive clear reuse rights.
 
 ## More Documentation
 
